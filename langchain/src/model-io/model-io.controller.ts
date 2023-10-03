@@ -97,4 +97,124 @@ export class ModelIoController {
   streaming() {
     return this.modelIoService.streaming();
   }
+
+  @Get("language-models/llm/how-to/subscribing-to-events")
+  subscribeEvents() {
+    return this.modelIoService.subscribeEvents();
+  }
+
+  @Get("language-models/llm/how-to/adding-timeout")
+  addingTimeout() {
+    return this.modelIoService.addingTimeout();
+  }
+
+  @Get("language-models/chat-models/call-method-1")
+  chatCallMethod1() {
+    return this.modelIoService.chatCallMethod1();
+  }
+
+  @Get("language-models/chat-models/call-method-2")
+  chatCallMethod2() {
+    return this.modelIoService.chatCallMethod2();
+  }
+
+  @Get("language-models/chat-models/generate-method")
+  chatGenerateMethod() {
+    return this.modelIoService.chatGenerateMethod();
+  }
+
+  @Get("language-models/chat-models/how-to/cancelling-requests")
+  cancellingChatRequests() {
+    return this.modelIoService.cancellingChatRequests();
+  }
+
+  @Get("language-models/chat-models/how-to/openai-function-calling")
+  openAiFunctionCalling() {
+    return this.modelIoService.openAiFunctionCalling();
+  }
+
+  @Get("language-models/chat-models/how-to/caching")
+  chatModelCaching() {
+    return this.modelIoService.chatModelCaching();
+  }
+
+  @Get("language-models/chat-models/how-to/llm-chain")
+  llmChain() {
+    return this.modelIoService.llmChain();
+  }
+
+  @Get("language-models/chat-models/how-to/prompts")
+  prompts() {
+    return this.modelIoService.prompts();
+  }
+
+  @Get("language-models/chat-models/how-to/streaming")
+  chatModelStreaming() {
+    return this.modelIoService.chatModelStreaming();
+  }
+
+  @Get("language-models/chat-models/how-to/subscribe-events")
+  chatModelSubscribeEvents() {
+    return this.modelIoService.chatModelSubscribeEvents();
+  }
+
+  @Get("language-models/chat-models/how-to/adding-timeout")
+  chatModelAddingTimeout() {
+    return this.modelIoService.chatModelAddingTimeout();
+  }
+
+  @Get("output-parsers/structured-output-parser")
+  structuredOutputParser() {
+    return this.modelIoService.structuredOutputParser();
+  }
+
+  @Get("output-parsers/structured-output-parser-zod-schema")
+  structuredOutputParserZodSchema() {
+    return this.modelIoService.structuredOutputParserZodSchema();
+  }
+
+  @Get("output-parsers/llm-chain")
+  outputParserLlmChain() {
+    return this.modelIoService.outputParserLlmChain();
+  }
+
+  @Get("output-parsers/bytes-output-parser")
+  bytesOutputParser() {
+    return this.modelIoService.bytesOutputParser();
+  }
+
+  @Get("output-parsers/combining-output-parser")
+  combiningOutputParser() {
+    return this.modelIoService.combiningOutputParser();
+  }
+
+  @Get("output-parsers/list-parser")
+  listParser() {
+    return this.modelIoService.listParser();
+  }
+
+  @Get("output-parsers/custom-list-parser")
+  customListParser() {
+    return this.modelIoService.customListParser();
+  }
+
+  @Get("output-parsers/auto-fixing-parser")
+  autoFixingParser() {
+    return this.modelIoService.autoFixingParser();
+  }
+
+  @Get("output-parsers/string-output-parser")
+  stringOutputParser() {
+    return this.modelIoService.stringOutputParser();
+  }
+
+  @Get("output-parsers/structured-output-parser")
+  structuredOutputParser2() {
+    return this.modelIoService.structuredOutputParser2();
+  }
+
+  @Get("output-parsers/structured-output-parser-zod-schema")
+  structuredOutputParserZodSchema2() {
+    return this.modelIoService.structuredOutputParserZodSchema2();
+  }
 }
