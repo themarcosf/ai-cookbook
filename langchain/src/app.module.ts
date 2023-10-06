@@ -5,6 +5,7 @@ import { AppService } from "./app.service";
 import { AppController } from "./app.controller";
 import { ModelIoModule } from "./model-io/model-io.module";
 import { RetrievalModule } from "./retrieval/retrieval.module";
+import { ChainsModule } from './chains/chains.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { RetrievalModule } from "./retrieval/retrieval.module";
     }),
     ModelIoModule,
     RetrievalModule,
+    ChainsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -10,7 +10,6 @@ import {
   RecursiveCharacterTextSplitter,
 } from "langchain/text_splitter";
 import { pull } from "langchain/hub";
-import { LLMChain } from "langchain/chains";
 import { Document } from "langchain/document";
 import { OpenAI } from "langchain/llms/openai";
 import { PromptTemplate } from "langchain/prompts";
@@ -29,13 +28,13 @@ import { InMemoryDocstore } from "langchain/stores/doc/in_memory";
 import { AttributeInfo } from "langchain/schema/query_constructor";
 import { StringOutputParser } from "langchain/schema/output_parser";
 import { SelfQueryRetriever } from "langchain/retrievers/self_query";
-import { RetrievalQAChain, loadQAStuffChain } from "langchain/chains";
 import { MultiQueryRetriever } from "langchain/retrievers/multi_query";
 import { JsonKeyOutputFunctionsParser } from "langchain/output_parsers";
 import { MultiVectorRetriever } from "langchain/retrievers/multi_vector";
 import { DirectoryLoader } from "langchain/document_loaders/fs/directory";
 import { ScoreThresholdRetriever } from "langchain/retrievers/score_threshold";
 import { ParentDocumentRetriever } from "langchain/retrievers/parent_document";
+import { LLMChain, RetrievalQAChain, loadQAStuffChain } from "langchain/chains";
 import { FunctionalTranslator } from "langchain/retrievers/self_query/functional";
 import { TimeWeightedVectorStoreRetriever } from "langchain/retrievers/time_weighted";
 import { LLMChainExtractor } from "langchain/retrievers/document_compressors/chain_extract";
