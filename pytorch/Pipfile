@@ -9,6 +9,7 @@ numpy = "*"
 matplotlib = "*"
 torch = "*"
 ipykernel = "*"
+scikit-learn = "*"
 
 [dev-packages]
 
