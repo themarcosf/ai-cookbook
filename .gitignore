@@ -1,6 +1,3 @@
-# python files
-.venv
-
 # system files
 .DS_Store
 **/.DS_Store
@@ -8,13 +5,7 @@
 # other files and folders
 **/processed/
 **/text/
+pytorch/models
 
 # enviroment variables
 **/.env
-
-# dependencies
-**/*-lock.json
-
-# compiled output
-**/dist
-**/node_modules
