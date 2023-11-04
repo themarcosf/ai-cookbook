@@ -10,6 +10,7 @@ matplotlib = "*"
 torch = "*"
 ipykernel = "*"
 scikit-learn = "*"
+requests = "*"
 
 [dev-packages]
 

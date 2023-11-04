@@ -5,6 +5,9 @@
 # other files and folders
 **/processed/
 **/text/
+
+# pytorch data folders
+pytorch/data
 pytorch/models
 
 # enviroment variables
