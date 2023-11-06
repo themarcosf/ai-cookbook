@@ -8,6 +8,9 @@ transformers = {extras = ["torch"], version = "*"}
 pandas = "*"
 sentencepiece = "*"
 ipykernel = "*"
+datasets = "*"
+huggingface-hub = "*"
+matplotlib = "*"
 
 [dev-packages]
 
