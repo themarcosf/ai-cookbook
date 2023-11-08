@@ -11,6 +11,7 @@ ipykernel = "*"
 datasets = "*"
 huggingface-hub = "*"
 matplotlib = "*"
+umap-learn = "*"
 
 [dev-packages]
 
