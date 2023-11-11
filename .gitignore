@@ -3,15 +3,10 @@
 **/.DS_Store
 
 # pytorch data and models
-pytorch/data
-pytorch/models
+pytorch/*/
 
 # hugging face transformers
-hugging-face/**
-
-# other files and folders
-**/processed/
-**/text/
+hugging-face/*/
 
 # enviroment variables
 **/.env
