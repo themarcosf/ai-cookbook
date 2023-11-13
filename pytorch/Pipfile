@@ -12,6 +12,7 @@ ipykernel = "*"
 scikit-learn = "*"
 requests = "*"
 torchvision = "*"
+torchmetrics = "*"
 
 [dev-packages]
 
