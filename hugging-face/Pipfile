@@ -12,6 +12,9 @@ datasets = "*"
 huggingface-hub = "*"
 matplotlib = "*"
 umap-learn = "*"
+bertviz = "*"
+jupyterlab = "*"
+ipywidgets = "*"
 
 [dev-packages]
 
