@@ -14,6 +14,7 @@ requests = "*"
 torchvision = "*"
 torchmetrics = "*"
 tqdm = "*"
+mlxtend = "*"
 
 [dev-packages]
 
