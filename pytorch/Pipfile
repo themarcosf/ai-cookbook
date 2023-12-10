@@ -16,6 +16,7 @@ torchmetrics = "*"
 tqdm = "*"
 mlxtend = "*"
 urllib3 = "==1.25.11"
+torchinfo = "*"
 
 [dev-packages]
 
