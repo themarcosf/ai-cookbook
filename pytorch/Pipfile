@@ -17,6 +17,7 @@ tqdm = "*"
 mlxtend = "*"
 urllib3 = "==1.25.11"
 torchinfo = "*"
+tensorboard = "*"
 
 [dev-packages]
 
