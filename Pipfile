@@ -13,6 +13,7 @@ beautifulsoup4 = "*"
 faiss-cpu = "*"
 langchainhub = "*"
 langserve = {extras = ["all"], version = "*"}
+pydantic = "*"
 
 [dev-packages]
 ipykernel = "*"
