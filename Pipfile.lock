@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "58f15f3c8d6c197a05cbd4d176743a5c857573affe5d657f0bcafaa491425236"
+            "sha256": "2ed73c48dc8d184c0e9e379d11510de2be3bcf224ebd26c05eb82c90068b2951"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -420,6 +420,15 @@
             "markers": "python_version >= '3.8'",
             "version": "==2023.12.2"
         },
+        "grandalf": {
+            "hashes": [
+                "sha256:2813f7aab87f0d20f334a3162ccfbcbf085977134a17a5b516940a93a77ea974",
+                "sha256:793ca254442f4a79252ea9ff1ab998e852c1e071b863593e5383afee906b4185",
+                "sha256:e62f76c6abadf74e9489bf6a5db0afce544a5e3e543708cf52e4707fd0a1a4f3"
+            ],
+            "index": "pypi",
+            "version": "==0.8"
+        },
         "h11": {
             "hashes": [
                 "sha256:8f19fbbe99e72420ff35c00b27a34cb9937e902a8b810e2c88300c6f0a3b699d",
@@ -495,11 +504,11 @@
         },
         "langchain-community": {
             "hashes": [
-                "sha256:30ab1d7dbf35d0ebe684d8a1e8964e8dedd3d31a3703790436b39674cfa06f41",
-                "sha256:eaeaa8d63427ecf0cb32fe2f1ba4d05ad6d5ef9f7019baf21dc2dde5b1403002"
+                "sha256:13b988afaa24e570d2b9992aecccb2fe36d9c33feafd9804f3066dc2ff042d4d",
+                "sha256:7cfe36c52b1fb86c1095d4dec0cf466a1c752a7446104e8b39cf0f70512a4851"
             ],
             "markers": "python_version < '4.0' and python_full_version >= '3.8.1'",
-            "version": "==0.0.11"
+            "version": "==0.0.12"
         },
         "langchain-core": {
             "hashes": [
@@ -876,6 +885,14 @@
             ],
             "markers": "python_version >= '3.7'",
             "version": "==2.14.6"
+        },
+        "pyparsing": {
+            "hashes": [
+                "sha256:32c7c0b711493c72ff18a981d24f28aaf9c1fb7ed5e9667c9e84e3db623bdbfb",
+                "sha256:ede28a1a32462f5a9705e07aea48001a08f7cf81a021585011deba701581a0db"
+            ],
+            "markers": "python_full_version >= '3.6.8'",
+            "version": "==3.1.1"
         },
         "python-dotenv": {
             "hashes": [
