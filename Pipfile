@@ -15,6 +15,7 @@ langchainhub = "*"
 langserve = {extras = ["all"], version = "*"}
 pydantic = "*"
 grandalf = "*"
+redis = "*"
 
 [dev-packages]
 ipykernel = "*"
