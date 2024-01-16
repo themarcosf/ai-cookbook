@@ -16,6 +16,18 @@ langserve = {extras = ["all"], version = "*"}
 pydantic = "*"
 grandalf = "*"
 redis = "*"
+numpy = "*"
+matplotlib = "*"
+torch = "*"
+scikit-learn = "*"
+requests = "*"
+torchvision = "*"
+torchmetrics = "*"
+tqdm = "*"
+mlxtend = "*"
+torchinfo = "*"
+tensorboard = "*"
+urllib3 = "==1.25.11"
 
 [dev-packages]
 ipykernel = "*"
