@@ -28,6 +28,11 @@ mlxtend = "*"
 torchinfo = "*"
 tensorboard = "*"
 urllib3 = "==1.25.11"
+duckduckgo-search = "*"
+flask = "*"
+black = "*"
+google-search-results = "*"
+crewai = "*"
 
 [dev-packages]
 ipykernel = "*"
