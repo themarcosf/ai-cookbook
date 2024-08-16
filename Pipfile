@@ -33,6 +33,7 @@ flask = "*"
 black = "*"
 google-search-results = "*"
 crewai = "*"
+ipykernel = "*"
 
 [dev-packages]
 ipykernel = "*"
