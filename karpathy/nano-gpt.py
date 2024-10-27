@@ -11,6 +11,7 @@ EVAL_INTERVAL = 300
 LEARNING_RATE = 1e-2
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 EVAL_ITERS = 200
+NUM_EMBEDDINGS = 32
 
 
 ### data
@@ -56,17 +57,22 @@ def get_batch(split, batch_size, verbose=False):
 
 ### bigram model
 class BigramLanguageModel(nn.Module):
-    def __init__(self, vocab_size):
+    def __init__(self):
         """
         `self.embedding` is 65 x 65, because for each of the 65 tokens in the vocabulary,
         we have a 65-dimensional vector that represents the probability of the token
         given the context.
         """
         super().__init__()
-        self.embedding = nn.Embedding(vocab_size, vocab_size)
+        self.token_embedding_table = nn.Embedding(vocab_size, NUM_EMBEDDINGS)
+        self.position_embedding_table = nn.Embedding(context_length, NUM_EMBEDDINGS)
+        self.lm_head = nn.Linear(NUM_EMBEDDINGS, vocab_size)
         
     def forward(self, inputs, targets=None):
-        logits = self.embedding(inputs)    # B, T, C
+        B, T = inputs.shape
+        token_embeddings = self.token_embedding_table(inputs)                                # B, T, C
+        position_embeddings = self.position_embedding_table(torch.arange(T, device=DEVICE))  # T, C
+        logits = self.lm_head(token_embeddings + position_embeddings)                        # B, T, V
 
         if targets is None:
             loss = None
@@ -108,7 +114,7 @@ def estimate_loss():
 
 batch_size = 32
 context_length = 8
-model = BigramLanguageModel(vocab_size).to(DEVICE)
+model = BigramLanguageModel().to(DEVICE)
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
 
 for iter in range(MAX_ITERS):
