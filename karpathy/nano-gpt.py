@@ -2,13 +2,14 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
+
 ### hyperparameters
 BATCH_SIZE = 32
 BLOCK_SIZE = 8
 
-MAX_ITERS = 3000
-EVAL_INTERVAL = 300
-LEARNING_RATE = 1e-2
+MAX_ITERS = 5000
+EVAL_INTERVAL = 500
+LEARNING_RATE = 1e-3
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 EVAL_ITERS = 200
 NUM_EMBEDDINGS = 32
@@ -35,6 +36,7 @@ n = int(len(tokenized_text) * 0.85)
 train_dataset = tokenized_text[:n]
 val_dataset = tokenized_text[n:]
 
+
 ### data loader
 def get_batch(split, batch_size, verbose=False):
     data = train_dataset if split == 'train' else val_dataset
@@ -55,24 +57,91 @@ def get_batch(split, batch_size, verbose=False):
     return input_batch, target_batch
 
 
-### bigram model
-class BigramLanguageModel(nn.Module):
+### self attention head
+class SelfAttentionHead(nn.Module):
+    def __init__(self, head_size):
+        super().__init__()
+        self.head_size = head_size
+        self.key = nn.Linear(NUM_EMBEDDINGS, head_size, bias=False)
+        self.query = nn.Linear(NUM_EMBEDDINGS, head_size, bias=False)
+        self.value = nn.Linear(NUM_EMBEDDINGS, head_size, bias=False)
+        self.register_buffer('tril', torch.tril(torch.ones(BLOCK_SIZE, BLOCK_SIZE)))
+
+    def forward(self, inputs):
+        B, T, C = inputs.shape
+
+        k = self.key(inputs)
+        q = self.query(inputs)
+
+        # compute scaled attention scores, ie. affinities
+        weights = q @ k.transpose(-2, -1) / (self.head_size ** 0.5)
+        weights = weights.masked_fill(self.tril[:T, :T] == 0, float('-inf'))
+        weights = F.softmax(weights, dim=-1)
+
+        # perform weighted aggregation of values
+        v = self.value(inputs)
+        logits = weights @ v
+
+        return logits
+    
+
+### multi-head self attention
+class MultiHeadSelfAttention(nn.Module):
+    def __init__(self, num_heads, head_size):
+        super().__init__()
+        self.heads = nn.ModuleList([SelfAttentionHead(head_size) for _ in range(num_heads)])
+
+    def forward(self, inputs):
+        return torch.cat([head(inputs) for head in self.heads], dim=-1)
+    
+
+### feed-forward layer
+class FeedForward(nn.Module):
+    def __init__(self, hidden_size):
+        super().__init__()
+        self.layer = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.ReLU()
+        )
+
+    def forward(self, inputs):
+        return self.layer(inputs)
+    
+
+### residual connections
+class Block(nn.Module):
+    """ Transformer block: communication followed by computation. """
+
+    def __init__(self, context_length, num_heads):
+        super().__init__()
+        head_size = context_length // num_heads
+        self.self_attention_heads = MultiHeadSelfAttention(num_heads, head_size)
+        self.feed_forward = FeedForward(context_length)
+
+    def forward(self, inputs):
+        x = self.self_attention_heads(inputs)
+        x = x + inputs
+        x = self.feed_forward(x)
+        x = x + inputs
+        return x
+
+
+### Transformer model
+class TransformerModel(nn.Module):
     def __init__(self):
-        """
-        `self.embedding` is 65 x 65, because for each of the 65 tokens in the vocabulary,
-        we have a 65-dimensional vector that represents the probability of the token
-        given the context.
-        """
         super().__init__()
         self.token_embedding_table = nn.Embedding(vocab_size, NUM_EMBEDDINGS)
         self.position_embedding_table = nn.Embedding(context_length, NUM_EMBEDDINGS)
-        self.lm_head = nn.Linear(NUM_EMBEDDINGS, vocab_size)
+        self.blocks = nn.Sequential(*[Block(NUM_EMBEDDINGS, num_heads=4) for _ in range(4)])
+        self.language_model_head = nn.Linear(NUM_EMBEDDINGS, vocab_size)
         
     def forward(self, inputs, targets=None):
         B, T = inputs.shape
-        token_embeddings = self.token_embedding_table(inputs)                                # B, T, C
-        position_embeddings = self.position_embedding_table(torch.arange(T, device=DEVICE))  # T, C
-        logits = self.lm_head(token_embeddings + position_embeddings)                        # B, T, V
+        token_embeddings = self.token_embedding_table(inputs)                              
+        position_embeddings = self.position_embedding_table(torch.arange(T, device=DEVICE))
+        contextual_embeddings = token_embeddings + position_embeddings                     
+        contextual_embeddings = self.blocks(contextual_embeddings)
+        logits = self.language_model_head(contextual_embeddings)                           
 
         if targets is None:
             loss = None
@@ -85,16 +154,16 @@ class BigramLanguageModel(nn.Module):
         return logits, loss
     
     def generate(self, inputs, num_predictions):
-        predictions = torch.zeros(inputs.shape[0] * num_predictions, dtype=torch.long)
-
-        for i in range(num_predictions):
-            logits, _ = self(inputs)
+        """ `Inputs` is a tensor of shape [B, T], where T is the current context length. """
+        for _ in range(num_predictions):
+            current_context = inputs[:, -context_length:]
+            logits, loss = self(current_context)
             logits = logits[:, -1, :]
             probs = F.softmax(logits, dim=-1)
-            target = torch.multinomial(probs, num_samples=1)
-            predictions[i] = target
+            predicted_token = torch.multinomial(probs, num_samples=1)
+            inputs = torch.cat([inputs, predicted_token], dim=1)
 
-        return predictions
+        return inputs
 
 
 ### training
@@ -114,13 +183,13 @@ def estimate_loss():
 
 batch_size = 32
 context_length = 8
-model = BigramLanguageModel().to(DEVICE)
-optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+model = TransformerModel().to(DEVICE)
+optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
 
 for iter in range(MAX_ITERS):
-    if iter % EVAL_INTERVAL == 0:
+    if (iter + 1) % EVAL_INTERVAL == 0:
         losses = estimate_loss()
-        print(f'Iter {iter} | Train loss {losses["train"]} | Val loss {losses["val"]}')
+        print(f'Iter {iter + 1} | Train loss {losses["train"]} | Val loss {losses["val"]}')
 
     X, y = get_batch('train', batch_size)
     logits, loss = model(X, y)
@@ -133,5 +202,5 @@ for iter in range(MAX_ITERS):
 NUM_PREDICTIONS = 50
 INPUTS = X[:1]
 
-predicted_targets = model.generate(INPUTS, NUM_PREDICTIONS)
+predicted_targets = model.generate(INPUTS, NUM_PREDICTIONS).squeeze(dim=0)
 print('Predicted characters: ', decode(predicted_targets.tolist()))
