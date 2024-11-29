@@ -90,18 +90,23 @@ class MultiHeadSelfAttention(nn.Module):
     def __init__(self, num_heads, head_size):
         super().__init__()
         self.heads = nn.ModuleList([SelfAttentionHead(head_size) for _ in range(num_heads)])
+        self.projection = nn.Linear(NUM_EMBEDDINGS, NUM_EMBEDDINGS)
 
     def forward(self, inputs):
-        return torch.cat([head(inputs) for head in self.heads], dim=-1)
+        inputs = torch.cat([head(inputs) for head in self.heads], dim=-1)
+        return self.projection(inputs)
     
 
 ### feed-forward layer
 class FeedForward(nn.Module):
+    inner_layer_dim = 4   # see https://arxiv.org/pdf/1706.03762, section 3.3
+
     def __init__(self, hidden_size):
         super().__init__()
         self.layer = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU()
+            nn.Linear(hidden_size, self.inner_layer_dim * hidden_size),
+            nn.ReLU(),
+            nn.Linear(self.inner_layer_dim * hidden_size, hidden_size)
         )
 
     def forward(self, inputs):
@@ -117,13 +122,13 @@ class Block(nn.Module):
         head_size = context_length // num_heads
         self.self_attention_heads = MultiHeadSelfAttention(num_heads, head_size)
         self.feed_forward = FeedForward(context_length)
+        self.layer_normalization_1 = nn.LayerNorm(context_length)
+        self.layer_normalization_2 = nn.LayerNorm(context_length)
 
     def forward(self, inputs):
-        x = self.self_attention_heads(inputs)
-        x = x + inputs
-        x = self.feed_forward(x)
-        x = x + inputs
-        return x
+        inputs = inputs + self.self_attention_heads(self.layer_normalization_1(inputs))
+        inputs = inputs + self.feed_forward(self.layer_normalization_2(inputs))
+        return inputs
 
 
 ### Transformer model
@@ -133,6 +138,7 @@ class TransformerModel(nn.Module):
         self.token_embedding_table = nn.Embedding(vocab_size, NUM_EMBEDDINGS)
         self.position_embedding_table = nn.Embedding(context_length, NUM_EMBEDDINGS)
         self.blocks = nn.Sequential(*[Block(NUM_EMBEDDINGS, num_heads=4) for _ in range(4)])
+        self.layer_normalization = nn.LayerNorm(NUM_EMBEDDINGS)
         self.language_model_head = nn.Linear(NUM_EMBEDDINGS, vocab_size)
         
     def forward(self, inputs, targets=None):
