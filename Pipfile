@@ -9,6 +9,13 @@ datasets = "*"
 evaluate = "*"
 accelerate = "*"
 torch = "*"
+numpy = "*"
+matplotlib = "*"
+tiktoken = "*"
+scikit-learn = "*"
+torchvision = "*"
+torchmetrics = "*"
+mlxtend = "*"
 
 [dev-packages]
 ipykernel = "*"
