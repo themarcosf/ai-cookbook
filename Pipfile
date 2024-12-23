@@ -6,8 +6,6 @@ name = "pypi"
 [packages]
 transformers = "*"
 datasets = "*"
-evaluate = "*"
-accelerate = "*"
 torch = "*"
 numpy = "*"
 matplotlib = "*"
