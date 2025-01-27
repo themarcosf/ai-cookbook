@@ -8,12 +8,6 @@ Title: A fully homomorphic encryption scheme
 - computational hardness layering -- differentiable soft argmax in our case
 - neural networks as 'ideal lattices' due to their ability to parallelize computations -- ie, neural networks perform ADD and MULT operations during backpropagation, which are the basis of homomorphic encryption
 
-> 1.2
-
-- "the essence of fully homomorphic encryption is simple: given ciphertexts that encrypt π1, . . . , πt, fully homomorphic encryption should allow anyone (not just the key-holder) to output a ciphertext that encrypts f(π1,...,πt) for any desired function f, as long as that function can be efficiently computed. No information about π1,...,πt or f(π1,...,πt), or any intermediate plaintext values, should leak; the inputs, output and intermediate values are always encrypted"
-- concept of 'circuit privacy' and 'oblivious transfers' -- can use their references to find more information on these topics
-- blind darkroom analogy -- "fully homomorphic encryption is like a darkroom where a photographer can develop film without ever seeing the images on it"
-
 > 1.3
 
 - THEOREM: "If E is bootstrappable, then, for any integer d, one can construct a scheme E(d) that can evaluate any circuit (consisting of NAND gates) of depth d. The decryption circuit for E(d) is the same as for E, and the complexity of encryption is also the same. E(d)’s public key size is O(d) times that of E’s. The complexity of EvaluateE(d) is polynomial in the security parameter and linear in the circuit size. If E is semantically secure against chosen plaintext attacks, then so is EvaluateE(d)"

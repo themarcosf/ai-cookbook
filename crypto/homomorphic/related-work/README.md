@@ -29,3 +29,9 @@ quote, page number
 - Neural network architecture
 - Performance metrics
 - Experiments
+
+4. Other
+
+- https://www.rfc-editor.org/rfc/rfc9458 (Oblivious HTTP)
+- https://www.swift.org/blog/announcing-swift-homomorphic-encryption/
+- https://github.com/apple/swift-homomorphic-encryption
