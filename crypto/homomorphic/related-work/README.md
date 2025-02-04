@@ -23,14 +23,7 @@ quote, page number
 - belong to a professor or researcher in a target institution
 - belong to a professional currently employed at a target company
 
-3. Proposed paper structure (max 9 pages):
-
-- Homomorphic encryption
-- Neural network architecture
-- Performance metrics
-- Experiments
-
-4. Other
+3. Other
 
 - https://www.rfc-editor.org/rfc/rfc9458 (Oblivious HTTP)
 - https://www.swift.org/blog/announcing-swift-homomorphic-encryption/
