@@ -3,9 +3,6 @@ Title: A fully homomorphic encryption scheme
 
 > 1.1
 
-- concept of 'noise' in the ciphertext -- non-deterministic encrypted vectors in our case
-- concept of 'shallowness' of circuits
-- computational hardness layering -- differentiable soft argmax in our case
 - neural networks as 'ideal lattices' due to their ability to parallelize computations -- ie, neural networks perform ADD and MULT operations during backpropagation, which are the basis of homomorphic encryption
 
 > 1.3
