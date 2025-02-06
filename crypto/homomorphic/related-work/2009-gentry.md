@@ -1,10 +1,6 @@
 URL: https://crypto.stanford.edu/craig/craig-thesis.pdf
 Title: A fully homomorphic encryption scheme
 
-> 1.1
-
-- neural networks as 'ideal lattices' due to their ability to parallelize computations -- ie, neural networks perform ADD and MULT operations during backpropagation, which are the basis of homomorphic encryption
-
 > 1.3
 
 - THEOREM: "If E is bootstrappable, then, for any integer d, one can construct a scheme E(d) that can evaluate any circuit (consisting of NAND gates) of depth d. The decryption circuit for E(d) is the same as for E, and the complexity of encryption is also the same. E(d)’s public key size is O(d) times that of E’s. The complexity of EvaluateE(d) is polynomial in the security parameter and linear in the circuit size. If E is semantically secure against chosen plaintext attacks, then so is EvaluateE(d)"
