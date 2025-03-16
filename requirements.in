@@ -1,4 +1,6 @@
+cryptography
 ipykernel
 numpy
 pandas
+tiktoken
 torch

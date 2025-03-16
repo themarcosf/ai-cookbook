@@ -8,8 +8,16 @@ appnope==0.1.4
     # via ipykernel
 asttokens==3.0.0
     # via stack-data
+certifi==2025.1.31
+    # via requests
+cffi==1.17.1
+    # via cryptography
+charset-normalizer==3.4.1
+    # via requests
 comm==0.2.2
     # via ipykernel
+cryptography==44.0.1
+    # via -r requirements.in
 debugpy==1.8.12
     # via ipykernel
 decorator==5.2.1
@@ -20,6 +28,8 @@ filelock==3.17.0
     # via torch
 fsspec==2025.2.0
     # via torch
+idna==3.10
+    # via requests
 ipykernel==6.29.5
     # via -r requirements.in
 ipython==9.0.0
@@ -70,6 +80,8 @@ ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
+pycparser==2.22
+    # via cffi
 pygments==2.19.1
     # via
     #   ipython
@@ -84,12 +96,18 @@ pyzmq==26.2.1
     # via
     #   ipykernel
     #   jupyter-client
+regex==2024.11.6
+    # via tiktoken
+requests==2.32.3
+    # via tiktoken
 six==1.17.0
     # via python-dateutil
 stack-data==0.6.3
     # via ipython
 sympy==1.13.1
     # via torch
+tiktoken==0.9.0
+    # via -r requirements.in
 torch==2.6.0
     # via -r requirements.in
 tornado==6.4.2
@@ -108,6 +126,8 @@ typing-extensions==4.12.2
     # via torch
 tzdata==2025.1
     # via pandas
+urllib3==2.3.0
+    # via requests
 wcwidth==0.2.13
     # via prompt-toolkit
 
