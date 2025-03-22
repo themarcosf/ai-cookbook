@@ -2,6 +2,7 @@ cryptography
 ipykernel
 numpy
 pandas
+sentencepiece
 tiktoken
 torch
 transformer_lens
