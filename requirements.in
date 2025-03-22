@@ -1,8 +1,9 @@
-cryptography
-ipykernel
-numpy
-pandas
-sentencepiece
-tiktoken
-torch
-transformer_lens
+cryptography==44.0.1
+ipykernel==6.29.5
+numpy==2.2.3
+pandas==2.2.3
+sentencepiece==0.2.0
+tiktoken==0.9.0
+torch==2.6.0
+transformers==4.49.0
+transformer_lens==2.15.0

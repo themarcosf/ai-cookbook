@@ -267,6 +267,7 @@ transformer-lens==2.15.0
     # via -r requirements.in
 transformers==4.49.0
     # via
+    #   -r requirements.in
     #   transformer-lens
     #   transformers-stream-generator
 transformers-stream-generator==0.0.5
