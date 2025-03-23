@@ -1,4 +1,6 @@
+circuitsvis==1.43.3
 cryptography==44.0.1
+einops==0.8.1
 ipykernel==6.29.5
 matplotlib==3.10.1
 numpy==2.2.3

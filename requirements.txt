@@ -34,6 +34,8 @@ cffi==1.17.1
     # via cryptography
 charset-normalizer==3.4.1
     # via requests
+circuitsvis==1.43.3
+    # via -r requirements.in
 click==8.1.8
     # via wandb
 comm==0.2.2
@@ -57,7 +59,9 @@ dill==0.3.7
 docker-pycreds==0.4.0
     # via wandb
 einops==0.8.1
-    # via transformer-lens
+    # via
+    #   -r requirements.in
+    #   transformer-lens
 executing==2.2.0
     # via stack-data
 fancy-einsum==0.0.3
@@ -92,6 +96,8 @@ idna==3.10
     # via
     #   requests
     #   yarl
+importlib-metadata==8.6.1
+    # via circuitsvis
 ipykernel==6.29.5
     # via -r requirements.in
 ipython==9.0.0
@@ -140,6 +146,7 @@ numpy==2.2.3
     # via
     #   -r requirements.in
     #   accelerate
+    #   circuitsvis
     #   contourpy
     #   datasets
     #   matplotlib
@@ -262,6 +269,7 @@ torch==2.6.0
     # via
     #   -r requirements.in
     #   accelerate
+    #   circuitsvis
     #   transformer-lens
 tornado==6.4.2
     # via
@@ -316,6 +324,8 @@ xxhash==3.5.0
     # via datasets
 yarl==1.18.3
     # via aiohttp
+zipp==3.21.0
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
