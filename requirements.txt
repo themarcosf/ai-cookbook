@@ -38,8 +38,12 @@ click==8.1.8
     # via wandb
 comm==0.2.2
     # via ipykernel
+contourpy==1.3.1
+    # via matplotlib
 cryptography==44.0.1
     # via -r requirements.in
+cycler==0.12.1
+    # via matplotlib
 datasets==2.14.4
     # via transformer-lens
 debugpy==1.8.12
@@ -63,6 +67,8 @@ filelock==3.17.0
     #   huggingface-hub
     #   torch
     #   transformers
+fonttools==4.56.0
+    # via matplotlib
 frozenlist==1.5.0
     # via
     #   aiohttp
@@ -104,10 +110,14 @@ jupyter-core==5.7.2
     # via
     #   ipykernel
     #   jupyter-client
+kiwisolver==1.4.8
+    # via matplotlib
 markdown-it-py==3.0.0
     # via rich
 markupsafe==3.0.2
     # via jinja2
+matplotlib==3.10.1
+    # via -r requirements.in
 matplotlib-inline==0.1.7
     # via
     #   ipykernel
@@ -130,7 +140,9 @@ numpy==2.2.3
     # via
     #   -r requirements.in
     #   accelerate
+    #   contourpy
     #   datasets
+    #   matplotlib
     #   pandas
     #   transformer-lens
     #   transformers
@@ -140,6 +152,7 @@ packaging==24.2
     #   datasets
     #   huggingface-hub
     #   ipykernel
+    #   matplotlib
     #   transformers
 pandas==2.2.3
     # via
@@ -150,6 +163,8 @@ parso==0.8.4
     # via jedi
 pexpect==4.9.0
     # via ipython
+pillow==11.1.0
+    # via matplotlib
 platformdirs==4.3.6
     # via
     #   jupyter-core
@@ -184,9 +199,12 @@ pygments==2.19.1
     #   ipython
     #   ipython-pygments-lexers
     #   rich
+pyparsing==3.2.1
+    # via matplotlib
 python-dateutil==2.9.0.post0
     # via
     #   jupyter-client
+    #   matplotlib
     #   pandas
 pytz==2025.1
     # via pandas

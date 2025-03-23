@@ -1,5 +1,6 @@
 cryptography==44.0.1
 ipykernel==6.29.5
+matplotlib==3.10.1
 numpy==2.2.3
 pandas==2.2.3
 sentencepiece==0.2.0

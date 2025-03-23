@@ -155,6 +155,7 @@ class TransformerModel(nn.Module):
         position_embeddings = self.position_embeddings(torch.arange(T, device=DEVICE))
         embeddings = token_embeddings + position_embeddings                     
         embeddings = self.blocks(embeddings)
+        embeddings = self.layer_norm(embeddings)
         logits = self.output_head(embeddings)                           
 
         if targets is None:
