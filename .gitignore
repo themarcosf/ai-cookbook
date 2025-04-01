@@ -3,6 +3,7 @@
 
 # pytorch data and models
 pytorch/*/
+__pycache__/
 
 # hugging face transformers
 hugging-face/*/
