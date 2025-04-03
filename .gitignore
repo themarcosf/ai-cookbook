@@ -9,5 +9,6 @@ __pycache__/
 hugging-face/*/
 
 # enviroment
+**/node_modules
 **/.venv
 **/.env
