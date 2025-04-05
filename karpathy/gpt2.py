@@ -1,6 +1,9 @@
+
+
+
+
 import math
 from dataclasses import dataclass
-
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -15,6 +18,7 @@ class GPTConfig:
     n_embd: int = 768
 
 class MultiHeadSelfAttention(nn.Module):
+
     def __init__(self, config):
         super().__init__()
         assert config.n_embd % config.n_head == 0
@@ -45,7 +49,7 @@ class MultiHeadSelfAttention(nn.Module):
 
         # attention
         att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
-        att = att.masked_fill(self.bias[:, :, T, T] == 0, float('-inf'))
+        att = att.masked_fill(self.bias[:, :, :T, :T] == 0, float('-inf'))
         att = F.softmax(att, dim=-1)
 
         out = att @ v # (B, n_heads, T, T) x (B, n_heads, T, h_size) -> (B, n_heads, T, h_size)
@@ -56,11 +60,11 @@ class MultiHeadSelfAttention(nn.Module):
         return out
 
 class FFN(nn.Module):
-    def __init__(self, n_embd):
+    def __init__(self, config):
         super().__init__()
-        self.c_fc  = nn.Linear(n_embd, 4*n_embd)
+        self.c_fc   = nn.Linear(config.n_embd, 4*config.n_embd)
         self.gelu   = nn.GELU(approximate='tanh')
-        self.c_proj = nn.Linear(4*n_embd, n_embd)
+        self.c_proj = nn.Linear(4*config.n_embd, config.n_embd)
 
     def forward(self, inputs):
         inputs = self.c_fc(inputs)
@@ -74,7 +78,7 @@ class Block(nn.Module):
         self.ln_1 = nn.LayerNorm(config.n_embd)
         self.attn = MultiHeadSelfAttention(config)
         self.ln_2 = nn.LayerNorm(config.n_embd)
-        self.mlp = FFN(config.n_embd)
+        self.mlp = FFN(config)
 
     def forward(self, inputs):
         inputs = inputs + self.attn(self.ln_1(inputs)) # map operation
@@ -82,6 +86,7 @@ class Block(nn.Module):
         return inputs
 
 class GPT(nn.Module):
+
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -97,7 +102,7 @@ class GPT(nn.Module):
 
     def forward(self, inputs):
         B, T = inputs.size()
-        assert T <= self.config.context_lengh, f'Cannot forward, model block size is exhausted. ' \
+        assert T <= self.config.context_lengh, f'Cannot forward, model context length is exhausted. ' \
                                                f'Input has {T} tokens, but the maximum is {self.config.context_lengh}'
         
         # forward input embedding and positional embedding
@@ -186,7 +191,7 @@ if __name__ == '__main__':
     tokens = encodings.encode('Once upon a time')
     tokens = torch.tensor(tokens, dtype=torch.long)
     tokens = tokens.unsqueeze(0).repeat(num_return_sequences, 1)
-    tokens = tokens.to(device)
+    x = tokens.to(device)
     print('Tokens loaded')
 
     # Load the model
@@ -198,10 +203,10 @@ if __name__ == '__main__':
     # Generate predictions
     max_length = 50
 
-    while tokens.size(1) < max_length:
+    while x.size(1) < max_length:
         with torch.no_grad():
             # forward pass
-            logits = model(tokens)
+            logits = model(x)
             # only the logit at the last location is needed
             # in effect, all other logits are basically thrown away
             logits = logits[:, -1, :]
@@ -214,10 +219,10 @@ if __name__ == '__main__':
             # gather the top-k token index
             top_k_index = torch.gather(top_k_indices, -1, top_k_token)
             # append the sampled token to the input
-            tokens = torch.cat((tokens, top_k_index), dim=1)
+            x = torch.cat((x, top_k_index), dim=1)
 
     # decode the predicted tokens
     for i in range(num_return_sequences):
-        tokens = tokens[i, :max_length].tolist()
+        tokens = x[i, :max_length].tolist()
         text = encodings.decode(tokens)
-        print(f'Generated text {i+1}: {text}')
+        print('>', text)
