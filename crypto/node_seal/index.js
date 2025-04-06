@@ -1,92 +1,124 @@
+// ----------------------------------------------------------------------------
+// This is intended to be a very simple demonstration of a homomorphic encryption
+// input/output pipeline using SEAL to be integrated with a cryptographic neural
+// network.
+//
+// We are currently implementing the complete pipeline in Rust, in order to achieve
+// maximum performance, parallelism, and security. Our goal is to provide a fully
+// functional pipeline so clients can run their our models on their own data, without
+// compromising their privacy.
+// ----------------------------------------------------------------------------
 import SEAL from "node-seal";
 
-const seal = await SEAL();
+(async () => {
+  // ----------------------------------------------------------------------------
+  // 1) Setup SEAL
+  // ----------------------------------------------------------------------------
+  const seal = await SEAL();
+  const schemeType = seal.SchemeType.bfv;
+  const securityLevel = seal.SecurityLevel.none;
 
-////////////////////////
-// Encryption Parameters
-////////////////////////
-const schemeType = seal.SchemeType.bfv;
-const securityLevel = seal.SecurityLevel.tc128;
-const polyModulusDegree = 4096;
-const bitSizes = [36, 36, 37];
-const bitSize = 20;
+  const polyModulusDegree = 4096;
+  const bitSizes = [36, 36, 37];
+  const bitSize = 20;
 
-const encParms = seal.EncryptionParameters(schemeType);
+  const parms = seal.EncryptionParameters(schemeType);
+  parms.setPolyModulusDegree(polyModulusDegree);
 
-// Set the PolyModulusDegree
-encParms.setPolyModulusDegree(polyModulusDegree);
-
-// Create a suitable set of CoeffModulus primes
-encParms.setCoeffModulus(
-  seal.CoeffModulus.Create(polyModulusDegree, Int32Array.from(bitSizes))
-);
-
-// Set the PlainModulus to a prime of bitSize 20.
-encParms.setPlainModulus(
-  seal.PlainModulus.Batching(polyModulusDegree, bitSize)
-);
-
-////////////////////////
-// Context
-////////////////////////
-const context = seal.Context(encParms, true, securityLevel);
-
-if (!context.parametersSet()) {
-  throw new Error(
-    "Could not set the parameters in the given context. Please try different encryption parameters."
+  parms.setCoeffModulus(
+    seal.CoeffModulus.Create(polyModulusDegree, Int32Array.from(bitSizes))
   );
-}
 
-////////////////////////
-// Keys
-////////////////////////
+  parms.setPlainModulus(seal.PlainModulus.Batching(polyModulusDegree, bitSize));
 
-// Create a new KeyGenerator (creates a new keypair internally)
-const keyGenerator = seal.KeyGenerator(context)
+  const context = seal.Context(parms, true, securityLevel);
 
-const secretKey = keyGenerator.secretKey()
-const publicKey = keyGenerator.createPublicKey()
-const relinKey = keyGenerator.createRelinKeys()
-// Generating Galois keys takes a while compared to the others
-const galoisKey = keyGenerator.createGalisKeys()
+  if (!context.parametersSet()) {
+    throw new Error(
+      "Could not set the parameters in the given context. Please try different encryption parameters."
+    );
+  }
 
-// Saving a key to a string is the same for each type of key
-const secretBase64Key = secretKey.save()
-const publicBase64Key = publicKey.save()
-const relinBase64Key = relinKey.save()
-// Please note saving Galois keys can take an even longer time and the output is **very** large.
-const galoisBase64Key = galoisKey.save()
+  const encoder = seal.BatchEncoder(context);
+  const keyGenerator = seal.KeyGenerator(context);
+  const publicKey = keyGenerator.createPublicKey();
+  const secretKey = keyGenerator.secretKey();
+  const encryptor = seal.Encryptor(context, publicKey);
+  const decryptor = seal.Decryptor(context, secretKey);
+  const evaluator = seal.Evaluator(context);
 
-// Loading a key from a base64 string is the same for each type of key
-// Load from the base64 encoded string
-const UploadedSecretKey = seal.SecretKey()
-UploadedSecretKey.load(context, secretBase64Key)
-...
+  // ----------------------------------------------------------------------------
+  // 2) Simple inbound pipeline
+  //
+  // Public key: shared with anyone who wants to encrypt data
+  // Secret key: only the provider has access to this key
+  // Secret noise param: only the client has access to this key
+  //
+  // This example shows how to encrypt a token on the client side, send it to the
+  // provider, and decrypt it on the provider side. The provider does not have
+  // access to the secret noise param and thus cannot decrypt the original token
+  // value.
+  // ----------------------------------------------------------------------------
+  // secret random noise parameter -- client side
+  // this value can be as large as desired for security purposes
+  const noiseParam = Int32Array.from([11]);
+  console.log("Noise: ", noiseParam);
 
+  // input plain data -- client side
+  // assume we are operating on a single token
+  const plainToken = Int32Array.from([42]);
+  console.log("Plain token: ", plainToken);
 
-// NOTE
-//
-// A KeyGenerator can also be instantiated with existing keys. This allows you to generate
-// new Relin/Galois keys with a previously generated SecretKey.
+  // input encoding and encryption -- client side
+  const noise = encryptor.encrypt(encoder.encode(noiseParam));
+  const encodedInput = encryptor.encrypt(encoder.encode(plainToken));
+  const transitInputToken = evaluator.multiply(encodedInput, noise);
+  console.log(
+    "Last 20 digits of transitInputToken: ...",
+    transitInputToken.save().slice(-20)
+  );
 
-// Uploading a SecretKey: first, create an Empty SecretKey to load
-const UploadedSecretKey = seal.SecretKey()
+  // input decryption and decoding -- provider side
+  // note that the provider does not have access to the secret noise param
+  // and thus cannot decrypt the original token value
+  const decoded = encoder.decode(decryptor.decrypt(transitInputToken));
+  const secureToken = decoded.filter((n) => n !== 0);
+  console.log("Secure input token: ", secureToken);
 
-// Load from the base64 encoded string
-UploadedSecretKey.load(context, secretBase64Key)
+  // ----------------------------------------------------------------------------
+  // 3) Simple outbound pipeline
+  //
+  // Public key: only the provider has access to this key
+  // Secret key: only the client has access to this key
+  // Secret noise param: we could add this to the provider, but we don't need to.
+  //
+  // This is similar to the inbound pipeline, but the provider encrypts the token
+  // and sends it to the client. The client decrypts the token using the secret
+  // key. The provider STILL does not have access to the secret noise param and thus
+  // cannot decrypt the output token value.
+  // ----------------------------------------------------------------------------
+  // output secure token -- provider side
+  const secureOutputToken = Int32Array.from([100]);
+  console.log("Secure output token: ", secureOutputToken);
 
-// Create a new KeyGenerator (use uploaded secretKey)
-const keyGenerator = seal.KeyGenerator(context, UploadedSecretKey)
+  // output encoding and encryption -- provider side
+  const transitOutputToken = encryptor.encrypt(
+    encoder.encode(secureOutputToken)
+  );
+  console.log(
+    "Last 20 digits of transitOutputToken: ...",
+    transitOutputToken.save().slice(-20)
+  );
 
-// Similarly, you may also create a KeyGenerator with a PublicKey. However, the benefit is purley to
-// save time by not generating a new PublicKey
+  // output decryption and decoding -- client side
+  const decodedOutput = encoder.decode(decryptor.decrypt(transitOutputToken));
+  const outputToken = decodedOutput.filter((n) => n !== 0);
+  console.log("Decoded output token: ", outputToken);
 
-// Uploading a PublicKey: first, create an Empty PublicKey to load
-const UploadedPublicKey = seal.PublicKey()
-
-// Load from the base64 encoded string
-UploadedPublicKey.load(context, publicBase64Key)
-
-// Create a new KeyGenerator (use both uploaded keys)
-const keyGenerator = seal.KeyGenerator(context, UploadedSecretKey, UploadedPublicKey)
-
+  // Remapping output token -- client side
+  // This is a simple example of remapping the output token. In a real-world
+  // scenario, the remapping function would depend on the specific use case.
+  const remappedOutputToken = outputToken.map((n) => n - 49);
+  console.log("Remapped output token: ", remappedOutputToken);
+  // ----------------------------------------------------------------------------
+})();
