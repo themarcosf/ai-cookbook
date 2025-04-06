@@ -12,7 +12,7 @@
 // scenario, we would need to handle multiple tokens. For example, DeepSeek-V2's
 // tokenizer contains 100K tokens. Therefore, for an unknown sequence length, the
 // total number of possible sequences is 100K^n, where n is the sequence length.
-// For a 10-token sequence length, this results in 100K^10 = (10^5)^10 = 10ˆ50
+// For a 10-token sequence length, this results in 100K^10 = (10^5)^10 = 10^50
 // possible sequences.
 //
 // source: https://huggingface.co/deepseek-ai/DeepSeek-V2
