@@ -7,6 +7,16 @@
 // maximum performance, parallelism, and security. Our goal is to provide a fully
 // functional pipeline so clients can run our models on their own data, without
 // compromising their privacy.
+//
+// The example below demonstrates our approach for a single token. In a real-world
+// scenario, we would need to handle multiple tokens. For example, DeepSeek-V2's
+// tokenizer contains 100K tokens. Therefore, for an unknown sequence length, the
+// total number of possible sequences is 100K^n, where n is the sequence length.
+// For a 10-token sequence length, this results in 100K^10 = (10^5)^10 = 10ˆ50
+// possible sequences.
+//
+//
+// source: https://huggingface.co/deepseek-ai/DeepSeek-V2
 // ----------------------------------------------------------------------------
 import SEAL from "node-seal";
 
