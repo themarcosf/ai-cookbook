@@ -22,7 +22,7 @@ import { performance } from "perf_hooks";
 
 (async () => {
   // ----------------------------------------------------------------------------
-  // Add timing start here
+  // timing start
   // ----------------------------------------------------------------------------
   const startTime = performance.now();
 
@@ -137,7 +137,7 @@ import { performance } from "perf_hooks";
   console.log("Remapped output token: ", remappedOutputToken);
 
   // ----------------------------------------------------------------------------
-  // Add timing end here and calculate total time
+  // timing end and total time
   // ----------------------------------------------------------------------------
   const endTime = performance.now();
   console.log(`Total time: ${(endTime - startTime).toFixed(2)} ms`);
