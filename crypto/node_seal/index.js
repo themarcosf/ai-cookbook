@@ -65,7 +65,7 @@ import SEAL from "node-seal";
   //
   // This example shows how to encrypt a token on the client side, send it to the
   // provider, and decrypt it on the provider side. The provider does not have
-  // access to the secret noise param and thus cannot decrypt the original token
+  // access to the secret noise param and thus cannot decode the original token
   // value.
   // ----------------------------------------------------------------------------
   // secret random noise parameter -- client side
@@ -101,10 +101,10 @@ import SEAL from "node-seal";
   // Secret key: only the client has access
   // Secret noise param: we could add this to the provider, but we don't need to.
   //
-  // This is similar to the inbound pipeline, but the provider encrypts the token
-  // and sends it to the client. The client decrypts the token using the secret
-  // key. The provider STILL does not have access to the secret noise param and thus
-  // cannot decrypt the output token value.
+  // This is similar to the inbound pipeline, but the provider encrypts the output
+  // token and sends it to the client. The client decrypts the token using the secret
+  // key. The provider has no prior knowledge of the token mapping and thus cannot
+  // decrypt the real token value.
   // ----------------------------------------------------------------------------
   // output secure token -- provider side
   const secureOutputToken = Int32Array.from([100]);
