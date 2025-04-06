@@ -60,8 +60,8 @@ import SEAL from "node-seal";
   // 2) Simple inbound pipeline
   //
   // Public key: shared with anyone who wants to encrypt data
-  // Secret key: only the provider has access to this key
-  // Secret noise param: only the client has access to this key
+  // Secret key: only the provider has access
+  // Secret noise param: only the client has access
   //
   // This example shows how to encrypt a token on the client side, send it to the
   // provider, and decrypt it on the provider side. The provider does not have
@@ -97,8 +97,8 @@ import SEAL from "node-seal";
   // ----------------------------------------------------------------------------
   // 3) Simple outbound pipeline
   //
-  // Public key: only the provider has access to this key
-  // Secret key: only the client has access to this key
+  // Public key: only the provider has access
+  // Secret key: only the client has access
   // Secret noise param: we could add this to the provider, but we don't need to.
   //
   // This is similar to the inbound pipeline, but the provider encrypts the token
