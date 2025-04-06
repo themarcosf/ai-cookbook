@@ -18,8 +18,14 @@
 // source: https://huggingface.co/deepseek-ai/DeepSeek-V2
 // ----------------------------------------------------------------------------
 import SEAL from "node-seal";
+import { performance } from "perf_hooks";
 
 (async () => {
+  // ----------------------------------------------------------------------------
+  // Add timing start here
+  // ----------------------------------------------------------------------------
+  const startTime = performance.now();
+
   // ----------------------------------------------------------------------------
   // 1) Setup SEAL
   // ----------------------------------------------------------------------------
@@ -129,5 +135,10 @@ import SEAL from "node-seal";
   // scenario, the remapping function would depend on the specific use case.
   const remappedOutputToken = outputToken.map((n) => n - 49);
   console.log("Remapped output token: ", remappedOutputToken);
+
   // ----------------------------------------------------------------------------
+  // Add timing end here and calculate total time
+  // ----------------------------------------------------------------------------
+  const endTime = performance.now();
+  console.log(`Total time: ${(endTime - startTime).toFixed(2)} ms`);
 })();

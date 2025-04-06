@@ -11,6 +11,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "node-seal": "^5.1.5"
+    "node-seal": "^5.1.5",
+    "perf_hooks": "^0.0.1"
   }
 }
