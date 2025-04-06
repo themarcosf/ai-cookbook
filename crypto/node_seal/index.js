@@ -5,7 +5,7 @@
 //
 // We are currently implementing the complete pipeline in Rust, in order to achieve
 // maximum performance, parallelism, and security. Our goal is to provide a fully
-// functional pipeline so clients can run their our models on their own data, without
+// functional pipeline so clients can run our models on their own data, without
 // compromising their privacy.
 // ----------------------------------------------------------------------------
 import SEAL from "node-seal";
