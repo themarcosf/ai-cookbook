@@ -84,7 +84,7 @@ import { performance } from "perf_hooks";
   // ----------------------------------------------------------------------------
   // secret random noise parameter -- client side
   // this value can be as large as desired for security purposes
-  const noiseParam = Int32Array.from([11]);
+  const noiseParam = Int32Array.from([1234567890]);
   console.log("Noise: ", noiseParam);
 
   // input plain data -- client side
