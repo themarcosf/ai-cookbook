@@ -19,9 +19,9 @@
 // As a final note, for this DEMO we departed from our underlying implementation
 // in two ways:
 // -1- we used the BFV algorithm instead of CKKS
-// -2- we used two pub-secret key pairs and kept the noise param secret instead of
-//     using a single pub-secret key pair, so the secret param can be shared and
-//     randomized.
+// -2- we used two `theoretical` pub-secret key pairs and kept the noise param secret
+//     instead of using a single pub-secret key pair, so the secret param can be
+//     shared and randomized.
 //
 // source: https://huggingface.co/deepseek-ai/DeepSeek-V2
 // ----------------------------------------------------------------------------
