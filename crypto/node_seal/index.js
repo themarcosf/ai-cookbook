@@ -10,10 +10,18 @@
 //
 // The example below demonstrates our approach for a single token. In a real-world
 // scenario, we would need to handle multiple tokens. For example, DeepSeek-V2's
-// tokenizer contains 100K tokens. Therefore, for an unknown sequence length, the
-// total number of possible sequences is 100K^n, where n is the sequence length.
-// For a 10-token sequence length, this results in 100K^10 = (10^5)^10 = 10^50
-// possible sequences.
+// tokenizer contains 100K tokens. In a `naive` calculation for an unknown sequence
+// length the total number of possible sequences is 100K^n, where n is the sequence
+// length. For a 10-token sequence length, this results in 100K^10 = (10^5)^10 = 10^50
+// possible sequences. This should be adjusted for more realistic conditional
+// probabilities, such as Markov chains or language grammars.
+//
+// As a final note, for this DEMO we departed from our underlying implementation
+// in two ways:
+// -1- we used the BFV algorithm instead of CKKS
+// -2- we used two pub-secret key pairs and kept the noise param secret instead of
+//     using a single pub-secret key pair, so the secret param can be shared and
+//     randomized.
 //
 // source: https://huggingface.co/deepseek-ai/DeepSeek-V2
 // ----------------------------------------------------------------------------
