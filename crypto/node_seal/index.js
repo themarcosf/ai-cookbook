@@ -1,4 +1,4 @@
-// ----------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
 // This is intended to be a very simple demonstration of a homomorphic encryption
 // input/output pipeline using SEAL to be integrated with a cryptographic neural
 // network.
@@ -24,36 +24,49 @@
 //     shared and randomized.
 //
 // source: https://huggingface.co/deepseek-ai/DeepSeek-V2
-// ----------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
+import * as fs from "fs";
+
 import SEAL from "node-seal";
 import { performance } from "perf_hooks";
 
 (async () => {
-  // ----------------------------------------------------------------------------
-  // timing start
-  // ----------------------------------------------------------------------------
+  ///////////////////////////////////////////////////////////////////////////////
+  // Timing start
+  ///////////////////////////////////////////////////////////////////////////////
   const startTime = performance.now();
 
-  // ----------------------------------------------------------------------------
-  // 1) Setup SEAL
-  // ----------------------------------------------------------------------------
+  ///////////////////////////////////////////////////////////////////////////////
+  // Encryption Parameters
+  ///////////////////////////////////////////////////////////////////////////////
   const seal = await SEAL();
-  const schemeType = seal.SchemeType.bfv;
-  const securityLevel = seal.SecurityLevel.none;
 
+  // seal.SchemeType.bfv; seal.SchemeType.bgv; seal.SchemeType.ckks
+  const schemeType = seal.SchemeType.bfv;
+
+  // higher bit-strength options reduce homomorphic operations
+  // seal.SecurityLevel.none; seal.SecurityLevel.[tc128, tc192, tc256]
+  const securityLevel = seal.SecurityLevel.tc128;
+
+  // needs to be a power of 2
   const polyModulusDegree = 4096;
   const bitSizes = [36, 36, 37];
   const bitSize = 20;
 
   const parms = seal.EncryptionParameters(schemeType);
+
   parms.setPolyModulusDegree(polyModulusDegree);
 
   parms.setCoeffModulus(
     seal.CoeffModulus.Create(polyModulusDegree, Int32Array.from(bitSizes))
   );
 
+  // not applicable to CKKS
   parms.setPlainModulus(seal.PlainModulus.Batching(polyModulusDegree, bitSize));
 
+  ///////////////////////////////////////////////////////////////////////////////
+  // Context - used to create all instances which execute within the same params
+  ///////////////////////////////////////////////////////////////////////////////
   const context = seal.Context(parms, true, securityLevel);
 
   if (!context.parametersSet()) {
@@ -62,16 +75,59 @@ import { performance } from "perf_hooks";
     );
   }
 
-  const encoder = seal.BatchEncoder(context);
-  const keyGenerator = seal.KeyGenerator(context);
-  const publicKey = keyGenerator.createPublicKey();
-  const secretKey = keyGenerator.secretKey();
-  const encryptor = seal.Encryptor(context, publicKey);
-  const decryptor = seal.Decryptor(context, secretKey);
-  const evaluator = seal.Evaluator(context);
+  ///////////////////////////////////////////////////////////////////////////////
+  // Keys
+  ///////////////////////////////////////////////////////////////////////////////
+  const secretKeyFile = "./keys/secretKey.txt";
+  const secretBase64Key = fs.readFileSync(secretKeyFile, "utf8");
+  const secretKey = seal.SecretKey();
+  secretKey.load(context, secretBase64Key);
 
-  // ----------------------------------------------------------------------------
-  // 2) Simple inbound pipeline
+  const publicKeyFile = "./keys/publicKey.txt";
+  const publicBase64Key = fs.readFileSync(publicKeyFile, "utf8");
+  const publicKey = seal.PublicKey();
+  publicKey.load(context, publicBase64Key);
+
+  seal.KeyGenerator(context, secretKey, publicKey);
+
+  ///////////////////////////////////////////////////////////////////////////////
+  // Instances
+  ///////////////////////////////////////////////////////////////////////////////
+  const evaluator = seal.Evaluator(context); // used to perform homomorphic operations
+  const encoder = seal.BatchEncoder(context); // used to encode to/decode from plaintext
+  const encryptor = seal.Encryptor(context, publicKey); // used to encrypt plaintext to ciphertext
+  const decryptor = seal.Decryptor(context, secretKey); // used to decrypt ciphertext to plaintext
+
+  ///////////////////////////////////////////////////////////////////////////////
+  // Variables
+  ///////////////////////////////////////////////////////////////////////////////
+
+  // // Creating PlainText(s)
+  // const plainA = seal.PlainText();
+  // const plainB = seal.PlainText();
+
+  // // Creating CipherText(s)
+  // const cipherA = seal.CipherText();
+  // const cipherB = seal.CipherText();
+
+  // // Saving
+  // // ... after some encoding...
+  // const plainAbase64 = plainA.save(); // Saves as a base64 string.
+
+  // // Loading. Create an empty instance, then use the following method
+  // const uploadedPlain = seal.PlainText();
+  // uploadedPlain.load(context, plainAbase64);
+
+  // // Saving
+  // // ... after some encryption...
+  // const cipherAbase64 = cipherA.save(); // Saves as a base64 string.
+
+  // // Loading. Create an empty instance, then use the following method
+  // const uploadedCipherText = seal.CipherText();
+  // uploadedCipherText.load(context, cipherAbase64);
+
+  ///////////////////////////////////////////////////////////////////////////////
+  // Simple inbound pipeline
   //
   // Public key: shared with anyone who wants to encrypt data
   // Secret key: only the provider has access
@@ -81,10 +137,11 @@ import { performance } from "perf_hooks";
   // provider, and decrypt it on the provider side. The provider does not have
   // access to the secret noise param and thus cannot decode the original token
   // value.
-  // ----------------------------------------------------------------------------
+  ///////////////////////////////////////////////////////////////////////////////
+
   // secret random noise parameter -- client side
   // this value can be as large as desired for security purposes
-  const noiseParam = Int32Array.from([1234567890]);
+  const noiseParam = Int32Array.from([11]);
   console.log("Noise: ", noiseParam);
 
   // input plain data -- client side
@@ -108,7 +165,7 @@ import { performance } from "perf_hooks";
   const secureToken = decoded.filter((n) => n !== 0);
   console.log("Secure input token: ", secureToken);
 
-  // ----------------------------------------------------------------------------
+  ///////////////////////////////////////////////////////////////////////////////
   // 3) Simple outbound pipeline
   //
   // Public key: only the provider has access
@@ -119,7 +176,7 @@ import { performance } from "perf_hooks";
   // token and sends it to the client. The client decrypts the token using the secret
   // key. The provider has no prior knowledge of the token mapping and thus cannot
   // decrypt the real token value.
-  // ----------------------------------------------------------------------------
+  ///////////////////////////////////////////////////////////////////////////////
   // output secure token -- provider side
   const secureOutputToken = Int32Array.from([100]);
   console.log("Secure output token: ", secureOutputToken);
@@ -144,9 +201,9 @@ import { performance } from "perf_hooks";
   const remappedOutputToken = outputToken.map((n) => n - 49);
   console.log("Remapped output token: ", remappedOutputToken);
 
-  // ----------------------------------------------------------------------------
+  ///////////////////////////////////////////////////////////////////////////////
   // timing end and total time
-  // ----------------------------------------------------------------------------
+  ///////////////////////////////////////////////////////////////////////////////
   const endTime = performance.now();
   console.log(`Total time: ${(endTime - startTime).toFixed(2)} ms`);
 })();
