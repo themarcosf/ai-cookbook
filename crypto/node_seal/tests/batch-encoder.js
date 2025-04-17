@@ -4,66 +4,53 @@ import SEAL from "node-seal";
   const seal = await SEAL();
 
   const securityLevel = seal.SecurityLevel.tc128;
+  const schemeType = seal.SchemeType.bfv;
   const polyModulusDegree = 1024;
   const bitSizes = Int32Array.from([27]);
+  const bitSize = 20;
+
   const coeffModulus = seal.CoeffModulus.Create(polyModulusDegree, bitSizes);
-  const sizeCapacity = 2;
+  const plainModulus = seal.PlainModulus.Batching(polyModulusDegree, bitSize);
+  const encParms = seal.EncryptionParameters(schemeType);
+  encParms.setPolyModulusDegree(polyModulusDegree);
+  encParms.setCoeffModulus(coeffModulus);
+  encParms.setPlainModulus(plainModulus);
+  const context = seal.Context(encParms, true, securityLevel);
 
-  const bitSize = 20
-  const plainModulus = seal.PlainModulus.Batching(polyModulusDegree, bitSize)
-  const bfvEncParms = seal.EncryptionParameters(seal.SchemeType.bfv);
-  bfvEncParms.setPolyModulusDegree(polyModulusDegree);
-  bfvEncParms.setCoeffModulus(coeffModulus);
-  bfvEncParms.setPlainModulus(plainModulus);
-  const bfvContext = seal.Context(bfvEncParms, true, securityLevel);
-  const bfvBatchEncoder = seal.BatchEncoder(bfvContext);
-  const bfvKeyGenerator = seal.KeyGenerator(bfvContext);
-  const bfvPublicKey = bfvKeyGenerator.createPublicKey();
-  const bfvEncryptor = seal.Encryptor(bfvContext, bfvPublicKey);
-  console.log("bfvBatchEncoder::slotCount: ", bfvBatchEncoder.slotCount);
-
-  const ckksEncParms = seal.EncryptionParameters(seal.SchemeType.ckks);
-  ckksEncParms.setPolyModulusDegree(polyModulusDegree);
-  ckksEncParms.setCoeffModulus(coeffModulus);
-  const ckksContext = seal.Context(ckksEncParms, true, securityLevel);
-  const ckksEncoder = seal.CKKSEncoder(ckksContext);
-  const ckksKeyGenerator = seal.KeyGenerator(ckksContext);
-  const ckksPublicKey = ckksKeyGenerator.createPublicKey();
-  const ckksEncryptor = seal.Encryptor(ckksContext, ckksPublicKey);
-  console.log("ckksEncoder::slotCount: ", ckksEncoder.slotCount);
+  const batchEncoder = seal.BatchEncoder(context);
+  console.log("batchEncoder::slotCount: ", batchEncoder.slotCount);
+  console.log("\n");
+  
+  const int32plain = Int32Array.from({length: batchEncoder.slotCount}, (_, i) => -i);
+  const int32encoded = batchEncoder.encode(int32plain);
+  const int32decoded = batchEncoder.decode(int32encoded, true);
+  console.log(`int32plain: ${int32plain.slice(0, 5)}...`);
+  console.log(`int32encoded: ${int32encoded.save().slice(0, 50)}...`);
+  console.log(`int32decoded: ${int32decoded.slice(0, 5)}...`);
+  console.log("\n");
+  
+  const int64plain = BigInt64Array.from({length: batchEncoder.slotCount}, (_, i) => BigInt(-i));
+  const int64encoded = batchEncoder.encode(int64plain);
+  const int64decoded = batchEncoder.decode(int64encoded, true);
+  console.log(`int64plain: ${int64plain.slice(0, 5)}...`);
+  console.log(`int64encoded: ${int64encoded.save().slice(0, 50)}...`);
+  console.log(`int64decoded: ${int64decoded.slice(0, 5)}...`);
+  console.log("\n");
+  
+  const uint32plain = Uint32Array.from({length: batchEncoder.slotCount}, (_, i) => i);
+  const uint32encoded = batchEncoder.encode(uint32plain);
+  const uint32decoded = batchEncoder.decode(uint32encoded, true);
+  console.log(`uint32plain: ${uint32plain.slice(0, 5)}...`);
+  console.log(`uint32encoded: ${uint32encoded.save().slice(0, 50)}...`);
+  console.log(`uint32decoded: ${uint32decoded.slice(0, 5)}...`);
   console.log("\n");
 
-  const bfvParmsId = bfvContext.firstParmsId
-  const bfvCipher = seal.CipherText({context: bfvContext, parmsId: bfvParmsId, sizeCapacity})
-
-  const bfvPlain = Int32Array.from({length: bfvBatchEncoder.slotCount}).fill(5);
-  console.log(`bfvPlain: ${bfvPlain.slice(0, 5)}...`);
-
-  const bfvEncoded = bfvBatchEncoder.encode(bfvPlain);
-  console.log(`bfvEncoded: ${bfvEncoded.save().slice(0, 50)}...`);
-
-  bfvEncryptor.encrypt(bfvEncoded, bfvCipher);
-  console.log("bfvCipher::parmsId: ", bfvCipher.parmsId.values);
-  console.log("bfvCipher: ", bfvCipher.save().slice(0, 50));
-  console.log("bfvCipher::isTransparent: ", bfvCipher.isTransparent);
-  console.log("bfvCipher::isNttForm: ", bfvCipher.isNttForm);
-  console.log("\n");
-
-  const ckksParmsId = ckksContext.firstParmsId
-  const ckksCipher = seal.CipherText({context: ckksContext, parmsId: ckksParmsId, sizeCapacity})
-
-  const ckksPlain = Float64Array.from({length: ckksEncoder.slotCount}).fill(6.6);
-  console.log(`ckksPlain: ${ckksPlain.slice(0, 5)}...`);
-
-  const ckksEncoded = ckksEncoder.encode(ckksPlain, Math.pow(2, 20));
-  console.log(`ckksEncoded: ${ckksEncoded.save().slice(0, 50)}...`);
-
-  ckksEncryptor.encrypt(ckksEncoded, ckksCipher);
-  console.log("ckksCipher::parmsId: ", ckksCipher.parmsId.values);
-  console.log("ckksCipher: ", ckksCipher.save().slice(0, 50));
-  console.log("ckksCipher::scale: ", ckksCipher.scale);
-  console.log("ckksCipher::isTransparent: ", ckksCipher.isTransparent);
-  console.log("ckksCipher::isNttForm: ", ckksCipher.isNttForm);
+  const uint64plain = BigUint64Array.from({length: batchEncoder.slotCount}, (_, i) => BigInt(i));
+  const uint64encoded = batchEncoder.encode(uint64plain);
+  const uint64decoded = batchEncoder.decode(uint64encoded, true);
+  console.log(`uint64plain: ${uint64plain.slice(0, 5)}...`);
+  console.log(`uint64encoded: ${uint64encoded.save().slice(0, 50)}...`);
+  console.log(`uint64decoded: ${uint64decoded.slice(0, 5)}...`);
 })();
 
-// Ref: https://github.com/s0l0ist/node-seal/blob/9618aca13e745ebb2a9c7d3a6b18d78e68d4aab9/src/__tests__/ckks-encoder.test.ts
+// Ref: https://github.com/s0l0ist/node-seal/blob/9618aca13e745ebb2a9c7d3a6b18d78e68d4aab9/src/__tests__/batch-encoder.test.ts
