@@ -8,17 +8,16 @@ import SEAL from "node-seal";
   bfvEncParms.setCoeffModulus(seal.CoeffModulus.BFVDefault(4096, seal.SecurityLevel.tc128))
   bfvEncParms.setPlainModulus(seal.PlainModulus.Batching(4096, 20))
 
-  const ckksEncParms = seal.EncryptionParameters(seal.SchemeType.ckks)
-  ckksEncParms.setPolyModulusDegree(4096)
-  ckksEncParms.setCoeffModulus(seal.CoeffModulus.Create(4096, Int32Array.from([46, 16, 46])))
-
   const bfvContext = seal.Context(bfvEncParms)
-  const parmsId = bfvContext.firstParmsId
+  console.log("bfvContext::parametersSet: ", bfvContext.parametersSet())
+  console.log("bfvContext::usingKeyswitching: ", bfvContext.usingKeyswitching)
   console.log("bfvContext::toHuman: ", bfvContext.toHuman())
-  console.log("bfvContext::paramsId: ", bfvContext.getContextData(parmsId).totalCoeffModulusBitCount)
-  console.log("bfvContext::keys: ", bfvContext.keyContextData.totalCoeffModulusBitCount)
-  console.log("bfvContext::data::firstContext: ", bfvContext.firstContextData.totalCoeffModulusBitCount)
-  console.log("bfvContext::data::lastContext: ", bfvContext.lastContextData.totalCoeffModulusBitCount)
+  console.log("bfvContext::keyContextData::totalCoeffModulusBitCount: ", bfvContext.keyContextData.totalCoeffModulusBitCount)
+  console.log("bfvContext::keysParmsId::value: ", bfvContext.keyParmsId.values)
+  console.log("bfvContext::data::firstContextData::totalCoeffModulusBitCount: ", bfvContext.firstContextData.totalCoeffModulusBitCount)
+  console.log("bfvContext::data::firstParmsId::totalCoeffModulusBitCount: ", bfvContext.firstParmsId.values)
+  console.log("bfvContext::data::lastContextData::totalCoeffModulusBitCount: ", bfvContext.lastContextData.totalCoeffModulusBitCount)
+  console.log("bfvContext::data::lastParmsId::totalCoeffModulusBitCount: ", bfvContext.lastParmsId.values)
 })();
 
 // Ref: https://github.com/s0l0ist/node-seal/blob/9618aca13e745ebb2a9c7d3a6b18d78e68d4aab9/src/__tests__/context.test.ts
