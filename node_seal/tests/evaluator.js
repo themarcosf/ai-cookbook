@@ -39,10 +39,10 @@ import SEAL from "node-seal";
   console.log(`encryptor::encrypt: ${encryptedFives.save().slice(0, 50)}...`);
   console.log("\n");
 
-  const plainSub = Int32Array.from({ length: bfvBatchEncoder.slotCount }, (_, i) => -2 * i);
-  const encodedSub = bfvBatchEncoder.encode(plainSub);
+  const plainOfEvenNegatives = Int32Array.from({ length: bfvBatchEncoder.slotCount }, (_, i) => -2 * i);
+  const encodedSub = bfvBatchEncoder.encode(plainOfEvenNegatives);
   const encryptedSub = bfvEncryptor.encrypt(encodedSub);
-  console.log(`plainSub: ${plainSub.slice(0, 20)}...`);
+  console.log(`plainOfEvenNegatives: ${plainOfEvenNegatives.slice(0, 20)}...`);
   console.log(`encoder::encode: ${encodedSub.save().slice(0, 50)}...`);
   console.log(`encryptor::encrypt: ${encryptedSub.save().slice(0, 50)}...`);
   console.log("\n");
@@ -71,7 +71,7 @@ import SEAL from "node-seal";
   console.log(`evaluator::sub: ${subtracted.save().slice(0, 50)}...`);
   console.log(`decryptor::decrypt: ${decryptedSubtracted.save().slice(0, 50)}...`);
   console.log(`decoder::decode: ${decodedSubtracted.slice(0, 20)}...`);
-  console.log(`decoded subtracted plain: ${decodedSubtracted.every((v, i) => v === plainOfNegatives[i] + 2 * i)}`);
+  console.log(`decoded subtracted evenPlain: ${decodedSubtracted.every((v, i) => v === plainOfNegatives[i] + 2 * i)}`);
   console.log("\n");
 
   const multipliedFail = bfvEvaluator.multiply(encryptedNegatives, encryptedNegatives);
@@ -96,7 +96,7 @@ import SEAL from "node-seal";
   console.log(`evaluator::multiply: ${multiplied.save().slice(0, 50)}...`);
   console.log(`decryptor::decrypt: ${decryptedMultiplied.save().slice(0, 50)}...`);
   console.log(`decoder::decode: ${decodedMultiplied.slice(0, 20)}...`);
-  console.log(`decoded multiplied plain: ${decodedMultiplied.every((v, i) => v === plainOfFives[i] * plainOfFives[i])}`);
+  console.log(`decoded multiplied fives: ${decodedMultiplied.every((v, i) => v === plainOfFives[i] * plainOfFives[i])}`);
   console.log("\n");
 
   const squared = bfvEvaluator.square(encryptedFives);
@@ -105,7 +105,7 @@ import SEAL from "node-seal";
   console.log(`evaluator::square: ${squared.save().slice(0, 50)}...`);
   console.log(`decryptor::decrypt: ${decryptedSquared.save().slice(0, 50)}...`);
   console.log(`decoder::decode: ${decodedSquared.slice(0, 20)}...`);
-  console.log(`decoded squared plain: ${decodedSquared.every((v, i) => v === plainOfFives[i] * plainOfFives[i])}`);
+  console.log(`decoded squared fives: ${decodedSquared.every((v, i) => v === plainOfFives[i] * plainOfFives[i])}`);
   console.log("\n");
 
   const relinearized = bfvEvaluator.relinearize(squared, bfvRelinearizationKeys);
