@@ -1,5 +1,7 @@
 import SEAL from "node-seal";
 
+const Loader = null;
+
 (async () => {
   const seal = await SEAL();
   const polyModulusDegree = 1024;
