@@ -26,7 +26,7 @@ const Loader = null;
   console.log("ckksEncoder::slotCount: ", ckksEncoder.slotCount);
   console.log("\n");
 
-  const raw = Float64Array.from({ length: ckksEncoder.slotCount }).map((_, i) => i == 0 ? 101 : 0)
+  const raw = Float64Array.from({ length: ckksEncoder.slotCount }).map((_, i) => i == 0 ? 2 : 0)
   console.log(`raw: ${raw.slice(0, 10)}...`);
 
   const plain = ckksEncoder.encode(raw, Math.pow(2, 20));
@@ -35,9 +35,13 @@ const Loader = null;
   const encryptor = seal.Encryptor(context, publicKey)
   const cipher = encryptor.encrypt(plain)
   console.log(`cipher: ${cipher.save().slice(0, 50)}...`);
+
+  const evaluator = seal.Evaluator(context)
+  const added = evaluator.add(cipher, cipher)
+  console.log(`added: ${added.save().slice(0, 50)}...`);
   
   const decryptor = seal.Decryptor(context, secretKey)
-  const decrypted = decryptor.decrypt(cipher)
+  const decrypted = decryptor.decrypt(added)
   console.log(`decrypted: ${decrypted.save().slice(0, 50)}...`);
 
   const decoded = ckksEncoder.decode(decrypted);
@@ -45,7 +49,7 @@ const Loader = null;
 
   const rounded = decoded.map((x) => Math.round(x));
   console.log(`rounded: ${rounded.slice(0, 10)}...`);
-  console.log(`raw == rounded: ${raw.slice(0, 10).every((x, i) => x == rounded[i])}`);
+  console.log(`raw == rounded: ${raw.slice(0, 10).every((x, i) => x * 2 == rounded[i])}`);
 })();
 
 // Ref: https://github.com/s0l0ist/node-seal/tree/9618aca13e745ebb2a9c7d3a6b18d78e68d4aab9
