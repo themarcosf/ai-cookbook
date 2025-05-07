@@ -1,16 +1,16 @@
 import asyncio
 import os
-import sys
 from typing import Optional
 from contextlib import AsyncExitStack
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
-from mcp import ClientSession, StdioServerParameters, types
+from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from mcp.server.fastmcp import FastMCP
 
-NOTES_FILE = os.path.join(os.path.dirname(__file__), 'notes.txt')
+PATH = os.path.dirname(__file__)
+NOTES_FILE = os.path.join(PATH, 'notes.txt')
+print(NOTES_FILE)
 
 load_dotenv()
 
@@ -18,15 +18,8 @@ load_dotenv()
 # Client
 ###############################################################################
 server_parms = StdioServerParameters(
-    command='/Users/marcosf/.local/bin/uv',
-    args=[
-        'run',
-        '--with',
-        'mcp[cli]',
-        'mcp',
-        'run',
-        '/Users/marcosf/Desktop/research/model-context-protocol/server.py'
-    ],
+    command='mcp',
+    args=['run', os.path.join(PATH, 'server.py')],
     env=None,  
 )
 

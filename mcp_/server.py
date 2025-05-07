@@ -1,13 +1,6 @@
-import asyncio
 import os
-import sys
-from typing import Optional
-from contextlib import AsyncExitStack
 
-from anthropic import Anthropic
 from dotenv import load_dotenv
-from mcp import ClientSession, StdioServerParameters, types
-from mcp.client.stdio import stdio_client
 from mcp.server.fastmcp import FastMCP
 
 NOTES_FILE = os.path.join(os.path.dirname(__file__), 'notes.txt')
