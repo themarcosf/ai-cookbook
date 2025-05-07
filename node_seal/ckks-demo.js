@@ -1,6 +1,11 @@
 import SEAL from "node-seal";
 
-const Loader = null;
+function partialEval(cipher) {
+  const str = cipher.save();
+  const buffer = new Uint8Array([...str].map(char => char.charCodeAt(0)));
+  return buffer;
+}
+
 
 (async () => {
   const seal = await SEAL();
@@ -26,8 +31,10 @@ const Loader = null;
   console.log("ckksEncoder::slotCount: ", ckksEncoder.slotCount);
   console.log("\n");
 
-  const raw = Float64Array.from({ length: ckksEncoder.slotCount }).map((_, i) => i == 0 ? 2 : 0)
-  console.log(`raw: ${raw.slice(0, 10)}...`);
+  const input = Float64Array.from({ length: ckksEncoder.slotCount }).map((_, i) => i+1)
+  console.log(`input: ${input.slice(0, 10)}, ..., ${input.slice(-10)}`);
+  const raw = Float64Array.from({ length: ckksEncoder.slotCount }).map((_, i) => input[i]/10)
+  console.log(`raw: ${raw.slice(0, 10)}, ..., ${raw.slice(-10)}`);
 
   const plain = ckksEncoder.encode(raw, Math.pow(2, 20));
   console.log(`plain: ${plain.save().slice(0, 50)}...`);
@@ -37,8 +44,14 @@ const Loader = null;
   console.log(`cipher: ${cipher.save().slice(0, 50)}...`);
 
   const evaluator = seal.Evaluator(context)
+  evaluator._parent = {seal, context};
+  evaluator.partialEval = partialEval.bind(evaluator);
+
   const added = evaluator.add(cipher, cipher)
   console.log(`added: ${added.save().slice(0, 50)}...`);
+
+  const partial = evaluator.partialEval(cipher)
+  console.log(`\n---> partial: ${partial.slice(0, 20)}...\n`);
   
   const decryptor = seal.Decryptor(context, secretKey)
   const decrypted = decryptor.decrypt(added)
@@ -47,9 +60,9 @@ const Loader = null;
   const decoded = ckksEncoder.decode(decrypted);
   console.log(`decoded: ${decoded.slice(0, 10)}...`);
 
-  const rounded = decoded.map((x) => Math.round(x));
-  console.log(`rounded: ${rounded.slice(0, 10)}...`);
-  console.log(`raw == rounded: ${raw.slice(0, 10).every((x, i) => x * 2 == rounded[i])}`);
+  const rounded = decoded.map((x) => Math.round(x * 10));
+  console.log(`rounded: ${rounded.slice(0, 10)}, ..., ${rounded.slice(-10)}`);
+  console.log(`raw == rounded: ${input.slice(0, 10).every((x, i) => x * 2 == rounded[i])}`);
 })();
 
 // Ref: https://github.com/s0l0ist/node-seal/tree/9618aca13e745ebb2a9c7d3a6b18d78e68d4aab9
