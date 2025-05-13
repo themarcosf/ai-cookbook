@@ -1,9 +1,30 @@
 import SEAL from "node-seal";
 
-function partialEval(cipher) {
-  const str = cipher.save();
-  const buffer = new Uint8Array([...str].map(char => char.charCodeAt(0)));
-  return buffer;
+function getPolyCoeffs(ciphertext, size, coeffModulus) {
+  console.log('\n    -> getPolyCoeffs');
+  const modulus_value = coeffModulus[0];
+  console.log(`modulus_value: ${modulus_value}`);
+  return "pending"
+}
+
+function partialEval(ciphertext) {
+  console.log('\n-> partialEval');
+  const size = ciphertext.size
+  console.log(`ciphertext_size: ${size}`);
+  const polyModulusDegree = ciphertext.polyModulusDegree
+  console.log(`polyModulusDegree: ${polyModulusDegree}`);
+  const coeffModulusSize = ciphertext.coeffModulusSize
+  console.log(`coeffModulusSize: ${coeffModulusSize}`);
+  const wordCount = size * polyModulusDegree * coeffModulusSize
+  console.log(`wordCount: ${wordCount}`);
+
+  const contextData = this._parent.context.getContextData(ciphertext.parmsId)
+  const parms = contextData.parms
+  const coeffModulus = parms.coeffModulus
+  const polyCoeffs = getPolyCoeffs(ciphertext, size, coeffModulus)
+  console.log(`\n    ---> getPolyCoeffs: ${polyCoeffs}`);
+
+  return 'pending'
 }
 
 
@@ -25,11 +46,10 @@ function partialEval(cipher) {
   console.log(`secretKey: ${secretKey.save().slice(0, 50)}...`);
 
   const publicKey = keyGenerator.createPublicKey()
-  console.log(`publicKey: ${publicKey.save().slice(0, 50)}...`);
+  console.log(`publicKey: ${publicKey.save().slice(0, 50)}...\n`);
 
   const ckksEncoder = seal.CKKSEncoder(context);
-  console.log("ckksEncoder::slotCount: ", ckksEncoder.slotCount);
-  console.log("\n");
+  console.log(`ckksEncoder::slotCount: ${ckksEncoder.slotCount}\n`);
 
   const input = Float64Array.from({ length: ckksEncoder.slotCount }).map((_, i) => i+1)
   console.log(`input: ${input.slice(0, 10)}, ..., ${input.slice(-10)}`);

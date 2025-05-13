@@ -10,7 +10,7 @@ load_dotenv()
 ###############################################################################
 # Server
 ###############################################################################
-mcp = FastMCP('AI Sticky Notes')
+mcp = FastMCP('Everysk MCP Server')
 
 def ensure_file():
     """Ensure the notes file exists."""
@@ -46,6 +46,22 @@ def read_notes() -> str:
     with open(NOTES_FILE, 'r') as f:
         notes = f.read().strip()
     return notes or 'No notes found.'
+
+@mcp.tool()
+def get_portfolio(workspace: str, tags: str) -> list[dict]:
+    """
+    Get the portfolio from Everysk based on workspace and tags.
+
+    Args:
+        workspace (str): The workspace to query.
+        tags (str): The tags to filter by.
+
+    Returns:
+        list[dict]: The portfolio data.
+    """
+    from everysk.sdk.entities import Portfolio
+    portfolio = Portfolio.query.where('workspace', workspace).where('tags', tags).load()
+    return portfolio
 
 @mcp.resource('notes://latest')
 def get_latest_note() -> str:

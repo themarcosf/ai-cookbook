@@ -67,6 +67,8 @@ einops==0.8.1
     # via
     #   -r requirements.in
     #   eindex-callum
+everysk-lib==1.6.1618
+    # via -r requirements.in
 executing==2.2.0
     # via stack-data
 fastjsonschema==2.21.1
@@ -92,6 +94,8 @@ h11==0.16.0
     #   uvicorn
 hf-xet==1.1.0
     # via -r requirements.in
+holidays==0.51
+    # via everysk-lib
 httpcore==1.0.9
     # via httpx
 httpx==0.28.1
@@ -223,8 +227,10 @@ pygments==2.19.1
     #   rich
 pyparsing==3.2.1
     # via matplotlib
-python-dateutil==2.9.0.post0
+python-dateutil==2.8.2
     # via
+    #   everysk-lib
+    #   holidays
     #   jupyter-client
     #   matplotlib
     #   pandas
@@ -331,8 +337,10 @@ typing-inspection==0.4.0
     # via
     #   pydantic
     #   pydantic-settings
-tzdata==2025.1
-    # via pandas
+tzdata==2024.1
+    # via
+    #   everysk-lib
+    #   pandas
 urllib3==2.3.0
     # via requests
 uvicorn==0.34.2
