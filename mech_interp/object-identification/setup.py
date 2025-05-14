@@ -19,16 +19,16 @@ hf_model = DistilBertForSequenceClassification.from_pretrained(
     token=os.environ.get("HF_TOKEN", "") 
 )
 
-model = transformer_lens.HookedTransformer.from_pretrained(
+tokenizer = DistilBertTokenizer.from_pretrained('distilbert/distilbert-base-uncased-finetuned-sst-2-english')
+
+model = transformer_lens.HookedEncoder.from_pretrained(
     checkpoint, 
     hf_model=hf_model,
-    fold_ln=False, 
-    center_writing_weights=False, 
-    center_unembed=False, 
-    fold_value_biases=False
+    # fold_ln=False, 
+    # center_writing_weights=False, 
+    # center_unembed=False, 
+    # fold_value_biases=False
 )
-
-tokenizer = DistilBertTokenizer.from_pretrained('distilbert/distilbert-base-uncased-finetuned-sst-2-english')
 
 inputs = tokenizer(
   'I love this movie!', 
@@ -39,11 +39,11 @@ inputs = tokenizer(
 )
 
 with torch.no_grad():
-    logits = model('I love this movie!', return_type='logits')
+    breakpoint()
+    logits = model('I love this movie!')
     probs = F.softmax(logits, dim=-1)
     predicted_class_id = probs[:, -1, :].argmax().item()
     confidence_score = probs[:, -1, predicted_class_id].item()
-    breakpoint()
     predicted_label = hf_model.config.id2label[predicted_class_id]
 
 print({'label': predicted_label, 'score': confidence_score})
