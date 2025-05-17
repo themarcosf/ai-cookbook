@@ -147,7 +147,9 @@ markdown-it-py==3.0.0
 markupsafe==3.0.2
     # via jinja2
 matplotlib==3.10.1
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   seaborn
 matplotlib-inline==0.1.7
     # via
     #   ipykernel
@@ -177,6 +179,7 @@ numpy==2.2.3
     #   contourpy
     #   matplotlib
     #   pandas
+    #   seaborn
     #   transformers
 packaging==24.2
     # via
@@ -186,7 +189,9 @@ packaging==24.2
     #   plotly
     #   transformers
 pandas==2.2.3
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   seaborn
 parso==0.8.4
     # via jedi
 pexpect==4.9.0
@@ -272,6 +277,8 @@ rpds-py==0.24.0
     #   referencing
 safetensors==0.5.3
     # via transformers
+seaborn==0.13.2
+    # via -r requirements.in
 sentencepiece==0.2.0
     # via -r requirements.in
 shellingham==1.5.4
