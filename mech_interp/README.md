@@ -4,7 +4,7 @@ Due to limitations in the current implementation of the `TransformerLens` librar
 
 ##### 1. Add `TransformerLens` as a submodule
 ```bash
-git submodule add https://github.com/TransformerLensOrg/TransformerLens external/TransformerLens
+git submodule add https://github.com/themarcosf/transformer_lens external/TransformerLens
 git submodule update --init --recursive
 ```
 
