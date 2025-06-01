@@ -1,10 +1,54 @@
 import math
+import time
 from dataclasses import dataclass
+
+import tiktoken
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
+################################################################################
 ### Implementation
+################################################################################
+
+### Data Loader ################################################################
+class DataLoader:
+    def __init__(self, B, T):
+        self.B = B
+        self.T = T
+
+        with open('../data/tiny_shakespear.txt', 'r') as f:
+            text = f.read()
+
+        encodings = tiktoken.get_encoding('gpt2')
+
+        tokens = encodings.encode(text)
+        self.tokens = torch.tensor(tokens, dtype=torch.long)
+
+        print(f'Loaded {len(self.tokens)} tokens from the dataset')
+        print(f'1 epoch = {len(self.tokens) // (B * T)} batches of size {B} and sequence length {T}')
+
+        self.state = 0
+
+    def next_batch(self):
+        B, T = self.B, self.T
+        # buffer = self.tokens.clone().detach()
+        # buffer = self.tokens[self.state:self.state + B * T + 1].clone().detach()
+        buffer = self.tokens[self.state:self.state + B * T + 1]
+
+        x = (buffer[:-1]).view(B, T)  # input tokens
+        y = (buffer[1:]).view(B, T)   # target tokens
+
+        self.state += B * T
+
+        if self.state + B * T + 1 >= len(self.tokens):
+            print('End of dataset reached, resetting state')
+            self.state = 0
+        return x, y
+
+
+
+### Neural network #############################################################
 @dataclass
 class GPTConfig:
     context_lengh: int = 1024
@@ -24,6 +68,7 @@ class MultiHeadSelfAttention(nn.Module):
 
         # output projection
         self.c_proj = nn.Linear(config.n_embd, config.n_embd)
+        self.c_proj.SCALE_INIT = 1.0
 
         # regularization params
         self.n_head = config.n_head
@@ -43,12 +88,12 @@ class MultiHeadSelfAttention(nn.Module):
         k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, n_heads, T, h_size)
         v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, n_heads, T, h_size)
 
-        # attention
-        att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
-        att = att.masked_fill(self.bias[:, :, :T, :T] == 0, float('-inf'))
-        att = F.softmax(att, dim=-1)
-
-        out = att @ v # (B, n_heads, T, T) x (B, n_heads, T, h_size) -> (B, n_heads, T, h_size)
+        # flash attention
+        # att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
+        # att = att.masked_fill(self.bias[:, :, :T, :T] == 0, float('-inf'))
+        # att = F.softmax(att, dim=-1)
+        # out = att @ v # (B, n_heads, T, T) x (B, n_heads, T, h_size) -> (B, n_heads, T, h_size)
+        out = F.scaled_dot_product_attention(q, k, v, is_causal=True)
         out = out.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
 
         # output projection
@@ -61,6 +106,7 @@ class FFN(nn.Module):
         self.c_fc   = nn.Linear(config.n_embd, 4*config.n_embd)
         self.gelu   = nn.GELU(approximate='tanh')
         self.c_proj = nn.Linear(4*config.n_embd, config.n_embd)
+        self.c_proj.SCALE_INIT = 1.0
 
     def forward(self, inputs):
         inputs = self.c_fc(inputs)
@@ -95,6 +141,23 @@ class GPT(nn.Module):
         ))
 
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
+
+        # parameter sharing scheme (check #3.2 in the gpt2.ipynb)
+        self.transformer.wte.weight = self.lm_head.weight
+
+        # initialize weights (check #3.3 in the gpt2.ipynb)
+        self.apply(self._init_weights)
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            std = 0.02
+            if hasattr(module, 'SCALE_INIT'):
+                std *= (2 * self.config.n_layer) ** -0.5
+            nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
     def forward(self, inputs, targets=None):
         B, T = inputs.size()
@@ -175,6 +238,7 @@ class GPT(nn.Module):
 
 
 # Example usage
+# watch -n 0.1 nvidia-smi
 if __name__ == '__main__':
     # Set the device
     device = 'cpu'
@@ -185,48 +249,35 @@ if __name__ == '__main__':
     
     print(f'Using device: {device}')
 
-    # Define the number of return sequences
-    num_return_sequences = 5
+    # Create data loader
+    train_loader = DataLoader(B=8, T=1024)
+    print('Data loader created')
 
-    # Load the text data
-    with open('../data/tiny_shakespear.txt', 'r') as f:
-        text = f.read()
-
-    # Load the tokenizer
-    import tiktoken
-    encodings = tiktoken.get_encoding('gpt2')
-
-    # Encode the text data
-    tokens = encodings.encode(text)
-    tokens = torch.tensor(tokens, dtype=torch.long)
-
-    # Create input and target buffers
-    context_length = 1024
-    buffer = tokens.clone().detach()
-    # num_batches = buffer.shape[0] // context_length
-    num_batches = 4
-
-    input_buffer = buffer[:num_batches * context_length]
-    inputs = input_buffer.view(num_batches, context_length)
-
-    target_buffer = buffer[1:num_batches * context_length + 1]
-    targets = target_buffer.view(num_batches, context_length)
-
-    x = inputs.to(device)
-    y = targets.to(device)
-    print('Tokens loaded')
+    # set internal precision for matrix multiplication
+    torch.set_float32_matmul_precision('high')
 
     # Create new model
-    model = GPT(GPTConfig())
+    model = GPT(GPTConfig(vocab_size=50304))
     model.to(device)
+    model = torch.compile(model)
     print('Model loaded')
-
 
     # Optimize the model
     optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
     for i in range(50):
-        logits, loss = model(x, y)
+        t0 = time.time()
+        x, y = train_loader.next_batch()
+        x, y = x.to(device), y.to(device)
         optimizer.zero_grad()
+
+        with torch.autocast(device_type=device, dtype=torch.bfloat16 if device == 'cuda' else torch.float32):
+            logits, loss = model(x, y)
+
         loss.backward()
         optimizer.step()
-        print(f'Step {i+1}: Loss = {loss.item()}')
+        if device == 'cuda':
+            torch.cuda.synchronize()
+        t1 = time.time()
+        dt = (t1 - t0) * 1000
+        throughput = (train_loader.B * train_loader.T) / (t1 - t0)
+        print(f'Step {i+1}: Loss = {loss.item()}, Time = {dt:.2f} ms, Throughput = {throughput:.2f} tokens/s')
