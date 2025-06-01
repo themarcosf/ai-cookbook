@@ -17,6 +17,7 @@ seaborn==0.13.2
 sentencepiece==0.2.0
 tiktoken==0.9.0
 torch==2.6.0
+transformer-lens==2.15.4
 
 eindex
 git+https://github.com/callummcdougall/eindex.git

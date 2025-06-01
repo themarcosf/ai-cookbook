@@ -1,7 +1,3 @@
-
-
-
-
 import math
 from dataclasses import dataclass
 import torch
@@ -100,7 +96,7 @@ class GPT(nn.Module):
 
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
 
-    def forward(self, inputs):
+    def forward(self, inputs, targets=None):
         B, T = inputs.size()
         assert T <= self.config.context_lengh, f'Cannot forward, model context length is exhausted. ' \
                                                f'Input has {T} tokens, but the maximum is {self.config.context_lengh}'
@@ -116,9 +112,14 @@ class GPT(nn.Module):
             inputs = block(inputs)
 
         # forward the final layer norm and linear layer
-        inputs = self.transformer.ln_f(inputs)
+        inputs = self.transformer.ln_f(inputs) 
         logits = self.lm_head(inputs)
-        return logits
+
+        loss = None
+        if targets is not None:
+            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
+
+        return logits, loss
 
     @classmethod
     def from_pretrained(cls, model_type):
@@ -176,53 +177,56 @@ class GPT(nn.Module):
 # Example usage
 if __name__ == '__main__':
     # Set the device
-    if torch.backends.mps.is_available():
-        device = torch.device('mps')
-    else:
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = 'cpu'
+    if torch.cuda.is_available():
+        device = 'cuda'
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        device = 'mps'
     
     print(f'Using device: {device}')
 
-    # Load the tokenizer
+    # Define the number of return sequences
     num_return_sequences = 5
 
+    # Load the text data
+    with open('../data/tiny_shakespear.txt', 'r') as f:
+        text = f.read()
+
+    # Load the tokenizer
     import tiktoken
     encodings = tiktoken.get_encoding('gpt2')
-    tokens = encodings.encode('Once upon a time')
+
+    # Encode the text data
+    tokens = encodings.encode(text)
     tokens = torch.tensor(tokens, dtype=torch.long)
-    tokens = tokens.unsqueeze(0).repeat(num_return_sequences, 1)
-    x = tokens.to(device)
+
+    # Create input and target buffers
+    context_length = 1024
+    buffer = tokens.clone().detach()
+    # num_batches = buffer.shape[0] // context_length
+    num_batches = 4
+
+    input_buffer = buffer[:num_batches * context_length]
+    inputs = input_buffer.view(num_batches, context_length)
+
+    target_buffer = buffer[1:num_batches * context_length + 1]
+    targets = target_buffer.view(num_batches, context_length)
+
+    x = inputs.to(device)
+    y = targets.to(device)
     print('Tokens loaded')
 
-    # Load the model
-    model = GPT.from_pretrained('gpt2')
-    model.eval()
+    # Create new model
+    model = GPT(GPTConfig())
     model.to(device)
     print('Model loaded')
 
-    # Generate predictions
-    max_length = 50
 
-    while x.size(1) < max_length:
-        with torch.no_grad():
-            # forward pass
-            logits = model(x)
-            # only the logit at the last location is needed
-            # in effect, all other logits are basically thrown away
-            logits = logits[:, -1, :]
-            # probabilities of the next token
-            probs = F.softmax(logits, dim=-1)
-            # top-k sampling of 50 tokens (huggingface default)
-            top_k_probs, top_k_indices = probs.topk(k=50, dim=-1)
-            # sample from the top-k tokens
-            top_k_token = torch.multinomial(top_k_probs, num_samples=1)
-            # gather the top-k token index
-            top_k_index = torch.gather(top_k_indices, -1, top_k_token)
-            # append the sampled token to the input
-            x = torch.cat((x, top_k_index), dim=1)
-
-    # decode the predicted tokens
-    for i in range(num_return_sequences):
-        tokens = x[i, :max_length].tolist()
-        text = encodings.decode(tokens)
-        print('>', text)
+    # Optimize the model
+    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
+    for i in range(50):
+        logits, loss = model(x, y)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        print(f'Step {i+1}: Loss = {loss.item()}')
