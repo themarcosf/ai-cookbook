@@ -1,3 +1,4 @@
+import inspect
 import math
 import time
 from dataclasses import dataclass
@@ -159,6 +160,30 @@ class GPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
+    def configure_optimizers(self, weight_decay, learning_ratio, device):
+        param_dict = {pn: p for pn, p in self.named_parameters()}
+        param_dict = {k: v for k, v in param_dict.items() if v.requires_grad}
+
+        decay_params = [p for p in param_dict.values() if p.dim() >= 2]
+        no_decay_params = [p for p in param_dict.values() if p.dim() < 2]
+
+        optim_groups = [
+            {'params': decay_params, 'weight_decay': weight_decay},
+            {'params': no_decay_params, 'weight_decay': 0.0}
+        ]
+
+        num_decay_params = sum(p.numel() for p in decay_params)
+        num_no_decay_params = sum(p.numel() for p in no_decay_params)
+        print(f'Number of decayed parameters tersors: {len(decay_params)}, with {num_decay_params:,} total elements')
+        print(f'Number of non-decayed parameters tersors: {len(no_decay_params)}, with {num_no_decay_params:,} total elements')
+
+        fused_available = 'fused' in inspect.signature(torch.optim.AdamW).parameters
+        use_fused = fused_available and device == 'cuda'
+        print(f'Using fused AdamW: {use_fused}')
+
+        optimizer = torch.optim.AdamW(optim_groups, lr=learning_ratio, betas=(0.9, 0.95), eps=1e-8, fused=use_fused)
+        return optimizer
+
     def forward(self, inputs, targets=None):
         B, T = inputs.size()
         assert T <= self.config.context_lengh, f'Cannot forward, model context length is exhausted. ' \
@@ -249,7 +274,14 @@ if __name__ == '__main__':
     
     print(f'Using device: {device}')
 
-    # Create data loader
+    # Create data loader with gradient accumulation
+    B = 8                          # micro batch size
+    T = 1024                       # sequence length
+    gradient_accum_steps = 64      # gradient accumulation steps
+    total_batch_size = B * T * gradient_accum_steps
+    print(f'Training with total batch size: {total_batch_size} tokens')
+    print(f'Batch size: {B}, Sequence length: {T}, Gradient accumulation steps: {gradient_accum_steps}')
+
     train_loader = DataLoader(B=8, T=1024)
     print('Data loader created')
 
@@ -279,21 +311,26 @@ if __name__ == '__main__':
         return min_lr + coeff * (max_lr - min_lr)
 
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.9, 0.95), eps=1e-8)
+    optimizer = model.configure_optimizers(weight_decay=0.1, learning_ratio=6e-4, device=device)
 
     # Training loop
     for step in range(max_steps):
         t0 = time.time()
 
-        x, y = train_loader.next_batch()
-        x, y = x.to(device), y.to(device)
-
         optimizer.zero_grad()
 
-        with torch.autocast(device_type=device, dtype=torch.bfloat16 if device == 'cuda' else torch.float32):
-            logits, loss = model(x, y)
+        loss_accum = 0.0
 
-        loss.backward()
+        for micro_step in range(gradient_accum_steps):
+            x, y = train_loader.next_batch()
+            x, y = x.to(device), y.to(device)
+
+            with torch.autocast(device_type=device, dtype=torch.bfloat16 if device == 'cuda' else torch.float32):
+                logits, loss = model(x, y)
+
+            loss = loss / gradient_accum_steps
+            loss_accum += loss.detach()
+            loss.backward()
 
         norm = nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
@@ -306,6 +343,6 @@ if __name__ == '__main__':
             torch.cuda.synchronize()
 
         t1 = time.time()
-        dt = (t1 - t0) * 1000
-        tp = (train_loader.B * train_loader.T) / (t1 - t0)
-        print(f'Step {step+1}: Loss = {loss.item()}, Learning rate = {lr:.4f}, Time = {dt:.2f} ms, Norm: {norm:.4f}, Throughput = {tp:.2f} tokens/s')
+        dt = t1 - t0
+        tp = (train_loader.B * train_loader.T * gradient_accum_steps) / dt
+        print(f'Step {step+1}: Loss = {loss_accum.item():.6f}, Learning rate = {lr:.4e}, Time = {dt:.2f} s, Norm: {norm:.4f}, Throughput = {tp:.2f} tokens/s')
