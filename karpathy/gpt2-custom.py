@@ -262,22 +262,50 @@ if __name__ == '__main__':
     model = torch.compile(model)
     print('Model loaded')
 
-    # Optimize the model
-    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
-    for i in range(50):
+    # Optimizer
+    max_lr = 6e-4
+    min_lr = max_lr * 0.1
+    warmup_steps = 10
+    max_steps = 50
+
+    def get_lr(it):
+        if it < warmup_steps:
+            return max_lr * (it+1) / warmup_steps
+        if it > max_steps:
+            return min_lr
+        decay_ratio = (it - warmup_steps) / (max_steps - warmup_steps)
+        assert 0 <= decay_ratio <= 1, f'Invalid decay ratio: {decay_ratio}'
+        coeff = 0.5 * (1 + math.cos(math.pi * decay_ratio))
+        return min_lr + coeff * (max_lr - min_lr)
+
+
+    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.9, 0.95), eps=1e-8)
+
+    # Training loop
+    for step in range(max_steps):
         t0 = time.time()
+
         x, y = train_loader.next_batch()
         x, y = x.to(device), y.to(device)
+
         optimizer.zero_grad()
 
         with torch.autocast(device_type=device, dtype=torch.bfloat16 if device == 'cuda' else torch.float32):
             logits, loss = model(x, y)
 
         loss.backward()
+
+        norm = nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+
+        lr = get_lr(step)
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
         optimizer.step()
+
         if device == 'cuda':
             torch.cuda.synchronize()
+
         t1 = time.time()
         dt = (t1 - t0) * 1000
-        throughput = (train_loader.B * train_loader.T) / (t1 - t0)
-        print(f'Step {i+1}: Loss = {loss.item()}, Time = {dt:.2f} ms, Throughput = {throughput:.2f} tokens/s')
+        tp = (train_loader.B * train_loader.T) / (t1 - t0)
+        print(f'Step {step+1}: Loss = {loss.item()}, Learning rate = {lr:.4f}, Time = {dt:.2f} ms, Norm: {norm:.4f}, Throughput = {tp:.2f} tokens/s')
