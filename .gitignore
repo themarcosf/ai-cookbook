@@ -5,6 +5,10 @@
 pytorch/*/
 __pycache__/
 
+# karpathy data and models
+karpathy/seed_encodings/
+karpathy/edu_fineweb10B_shards/
+
 # hugging face transformers
 hugging-face/*/
 **/distilbert
