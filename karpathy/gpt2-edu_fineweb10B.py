@@ -30,14 +30,14 @@ os.makedirs(SHARDS_CACHE_DIR, exist_ok=True)
 ENCODINGS_CACHE_DIR = os.path.join(BASE_DIR, encodings_dir)
 
 # download the dataset
-fw = load_dataset('HuggingFaceFW/fineweb-edu', name=remote_name, split='train', streaming=True)
+fw = load_dataset('HuggingFaceFW/fineweb-edu', name=remote_name, split='train')
 
 # tokenization
 encodings = tiktoken.get_encoding('gpt2')
 eot_tkn = encodings._special_tokens['<|endoftext|>']
 
 filepath = os.path.join(ENCODINGS_CACHE_DIR, 'gpt2_seed_encodings.pkl')
-with open(filepath, "rb") as f:
+with open(filepath, 'rb') as f:
     seed_encodings: torch.Tensor = pickle.load(f)
 
 def tokenize(doc):
@@ -46,14 +46,13 @@ def tokenize(doc):
 
     seed_tokens = seed_encodings[tokens].tolist()
     seed_tokens_np = np.array(seed_tokens)
-
     assert (0 <= seed_tokens_np).all() and (seed_tokens_np < 2**16).all(), 'Token dictionary tokens must be in range [0, 2^16)'
+
     seed_tokens_np_uint16 = seed_tokens_np.astype(np.uint16)
     return seed_tokens_np_uint16
 
 def write_datafile(filename, tokens_np):
-    with open(filename, 'wb') as f:
-        f.write(tokens_np.tobytes())
+    np.save(filename, tokens_np)
 
 nprocs = max(1, os.cpu_count()//2)
 with mp.Pool(nprocs) as pool:
@@ -86,5 +85,5 @@ with mp.Pool(nprocs) as pool:
 
     if token_count != 0:
         split = 'val' if shard_index == 0 else 'train'
-        filename = os.path.join(SHARDS_CACHE_DIR, f'fineweb_{split}_{shard_index:06d}.npy')
+        filename = os.path.join(SHARDS_CACHE_DIR, f'fineweb_{split}_{shard_index:06d}')
         write_datafile(filename, all_tokens_np[:token_count])
