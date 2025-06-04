@@ -8,8 +8,10 @@ import numpy as np
 import tiktoken
 import torch
 import torch.nn as nn
-from torch.distributed import init_process_group
+import torch.distributed as dist
+from torch.distributed import init_process_group, destroy_process_group
 from torch.nn import functional as F
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 ################################################################################
 ### Implementation
@@ -327,6 +329,9 @@ if __name__ == '__main__':
     model = GPT(GPTConfig(vocab_size=50304))
     model.to(device)
     model = torch.compile(model)
+    if ddp:
+        model = DDP(model, device_ids=[ddp_local_rank])
+    raw_model = model.module if ddp else model
     print('Model loaded')
 
     # Optimizer
@@ -346,7 +351,7 @@ if __name__ == '__main__':
         return min_lr + coeff * (max_lr - min_lr)
 
 
-    optimizer = model.configure_optimizers(weight_decay=0.1, learning_ratio=6e-4, device=device)
+    optimizer = raw_model.configure_optimizers(weight_decay=0.1, learning_ratio=6e-4, device=device)
 
     # Training loop
     for step in range(max_steps):
@@ -365,7 +370,16 @@ if __name__ == '__main__':
 
             loss = loss / gradient_accum_steps
             loss_accum += loss.detach()
+
+            if ddp:
+                # naughty hack to avoid using no_sync context manager
+                # may break in future PyTorch versions
+                model.require_backward_grad_sync = (micro_step == gradient_accum_steps - 1)
+
             loss.backward()
+
+        if ddp:
+            dist.all_reduce(loss_accum, op=dist.ReduceOp.AVG)
 
         norm = nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
@@ -379,5 +393,10 @@ if __name__ == '__main__':
 
         t1 = time.time()
         dt = t1 - t0
-        tp = (train_loader.B * train_loader.T * gradient_accum_steps) / dt
-        print(f'Step {step+1}: Loss = {loss_accum.item():.6f}, Learning rate = {lr:.4e}, Time = {dt:.2f} s, Norm: {norm:.4f}, Throughput = {tp:.2f} tokens/s')
+        tp = (train_loader.B * train_loader.T * gradient_accum_steps * ddp_world_size) / dt
+        if master_process:
+            print(f'Step {step+1}: Loss = {loss_accum.item():.6f}, Learning rate = {lr:.4e}, Time = {dt:.2f} s, Norm: {norm:.4f}, Throughput = {tp:.2f} tokens/s')
+
+    if ddp:
+        destroy_process_group()
+        print('Destroyed DDP process group')
