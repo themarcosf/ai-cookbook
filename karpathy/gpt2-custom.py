@@ -52,7 +52,7 @@ class DataLoader:
 
         self.state += B * T * self.num_processes
 
-        if self.state + B * T * self.num_processes + 1 >= len(self.tokens):
+        if self.state + B * T * self.num_processes + 1 > len(self.tokens):
             print('End of dataset reached, resetting state')
             self.state = self.B * self.T * self.process_rank
         return x, y
