@@ -1,11 +1,14 @@
 import inspect
 import math
+import os
 import time
 from dataclasses import dataclass
 
+import numpy as np
 import tiktoken
 import torch
 import torch.nn as nn
+from torch.distributed import init_process_group
 from torch.nn import functional as F
 
 ################################################################################
@@ -13,10 +16,17 @@ from torch.nn import functional as F
 ################################################################################
 
 ### Data Loader ################################################################
+def load_tokens(filename):
+    npt = np.load(filename)
+    ptt = torch.tensor(npt, dtype=torch.long)
+    return ptt
+
 class DataLoader:
-    def __init__(self, B, T):
+    def __init__(self, B, T, process_rank, num_processes):
         self.B = B
         self.T = T
+        self.process_rank = process_rank
+        self.num_processes = num_processes
 
         with open('../data/tiny_shakespear.txt', 'r') as f:
             text = f.read()
@@ -29,7 +39,7 @@ class DataLoader:
         print(f'Loaded {len(self.tokens)} tokens from the dataset')
         print(f'1 epoch = {len(self.tokens) // (B * T)} batches of size {B} and sequence length {T}')
 
-        self.state = 0
+        self.state = self.B * self.T * self.process_rank
 
     def next_batch(self):
         B, T = self.B, self.T
@@ -40,11 +50,11 @@ class DataLoader:
         x = (buffer[:-1]).view(B, T)  # input tokens
         y = (buffer[1:]).view(B, T)   # target tokens
 
-        self.state += B * T
+        self.state += B * T * self.num_processes
 
-        if self.state + B * T + 1 >= len(self.tokens):
+        if self.state + B * T * self.num_processes + 1 >= len(self.tokens):
             print('End of dataset reached, resetting state')
-            self.state = 0
+            self.state = self.B * self.T * self.process_rank
         return x, y
 
 
@@ -263,26 +273,51 @@ class GPT(nn.Module):
 
 
 # Example usage
+# torchrun --standalone --nproc_per_node=4 gpt2-custom.py
 # watch -n 0.1 nvidia-smi
 if __name__ == '__main__':
-    # Set the device
-    device = 'cpu'
+    # DDP initialization
+    ddp = int(os.environ.get('RANK', -1)) != -1
+
+    if ddp:
+        assert torch.cuda.is_available(), 'DDP requires CUDA'
+        init_process_group(backend='nccl')
+        ddp_rank = int(os.environ.get('RANK'))
+        ddp_local_rank = int(os.environ.get('LOCAL_RANK'))
+        ddp_world_size = int(os.environ.get('WORLD_SIZE'))
+        device = f'cuda:{ddp_local_rank}'
+        torch.cuda.set_device(device)
+        master_process = ddp_rank == 0
+    else:
+        ddp_rank = 0
+        ddp_local_rank = 0
+        ddp_world_size = 1
+        master_process = True
+
+        device = 'cpu'
+
+        if torch.cuda.is_available():
+            device = 'cuda'
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            device = 'mps'
+
+        print(f'Using device: {device}, DDP enabled: {ddp}')
+
+    torch.manual_seed(42)
     if torch.cuda.is_available():
-        device = 'cuda'
-    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-        device = 'mps'
-    
-    print(f'Using device: {device}')
+        torch.cuda.manual_seed(42)
 
     # Create data loader with gradient accumulation
+    total_batch_size = 524_288     # 2**19, ~ 500k tokens
     B = 8                          # micro batch size
     T = 1024                       # sequence length
-    gradient_accum_steps = 64      # gradient accumulation steps
-    total_batch_size = B * T * gradient_accum_steps
-    print(f'Training with total batch size: {total_batch_size} tokens')
-    print(f'Batch size: {B}, Sequence length: {T}, Gradient accumulation steps: {gradient_accum_steps}')
+    assert total_batch_size % (B * T * ddp_world_size) == 0, f'Total batch size {total_batch_size} must be divisible by B * T * ddp_world_size = {B * T * ddp_world_size}'
+    gradient_accum_steps = total_batch_size // (B * T * ddp_world_size)
+    if master_process:
+        print(f'Training with total batch size: {total_batch_size} tokens')
+        print(f'Batch size: {B}, Sequence length: {T}, Gradient accumulation steps: {gradient_accum_steps}')
 
-    train_loader = DataLoader(B=8, T=1024)
+    train_loader = DataLoader(B=B, T=T, process_rank=ddp_rank, num_processes=ddp_world_size)
     print('Data loader created')
 
     # set internal precision for matrix multiplication
