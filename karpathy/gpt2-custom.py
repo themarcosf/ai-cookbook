@@ -41,6 +41,9 @@ class DataLoader:
         if master_process:
             print(f'Found {len(shards)} shards for split {split}')
 
+        self.reset()
+
+    def reset(self):
         self.current_shard = 0
         self.tokens = load_tokens(self.shards[self.current_shard])
         self.state = self.B * self.T * self.process_rank
@@ -357,9 +360,77 @@ if __name__ == '__main__':
 
     optimizer = raw_model.configure_optimizers(weight_decay=0.1, learning_ratio=6e-4, device=device)
 
-    # Training loop
+    encodings = tiktoken.get_encoding('gpt2')
+
     for step in range(max_steps):
         t0 = time.time()
+
+        # Evaluate loss
+        if step % 2 == 0:
+            model.eval()
+            val_loader.reset()
+
+            with torch.no_grad():
+                val_loss_accum = 0.0
+                val_loss_steps = 20
+
+                for _ in range(val_loss_steps):
+                    x, y = val_loader.next_batch()
+                    x, y = x.to(device), y.to(device)
+
+                    with torch.autocast(device_type=device, dtype=torch.bfloat16 if device == 'cuda' else torch.float32):
+                        _, loss = model(x, y)
+
+                    loss /= val_loss_steps
+                    val_loss_accum += loss.detach()
+
+            if ddp:
+                dist.all_reduce(val_loss_accum, op=dist.ReduceOp.AVG)
+
+            if master_process:
+                print(f'Step {step+1}: Validation loss = {val_loss_accum.item():.6f}')
+
+        # Sample from the model
+        if step > 0 and step % 2 == 0:
+            model.eval()
+
+            num_return_sequences = 4
+            max_length = 32
+
+            tokens = encodings.encode('Once upon a time')
+            tokens = torch.tensor(tokens, dtype=torch.long)
+            tokens = tokens.unsqueeze(0).repeat(num_return_sequences, 1)
+            x_gen = tokens.to(device)
+
+            sample_rng = torch.Generator(device=device)
+            sample_rng.manual_seed(42 + ddp_rank)
+
+            while x_gen.size(1) < max_length:
+                with torch.no_grad():
+                    # forward pass
+                    logits, _ = model(x_gen)
+                    # only the logit at the last location is needed
+                    logits = logits[:, -1, :]
+                    # probabilities of the next token
+                    probs = F.softmax(logits, dim=-1)
+                    # top-k sampling of 50 tokens (huggingface default)
+                    top_k_probs, top_k_indices = probs.topk(k=50, dim=-1)
+                    # sample from the top-k tokens
+                    top_k_token = torch.multinomial(top_k_probs, num_samples=1, generator=sample_rng)
+                    # gather the top-k token index
+                    top_k_index = torch.gather(top_k_indices, -1, top_k_token)
+                    # append the sampled token to the input
+                    x_gen = torch.cat((x_gen, top_k_index), dim=1)
+
+            # decode the predicted tokens
+            for i in range(num_return_sequences):
+                tokens = x_gen[i, :max_length].tolist()
+                text = encodings.decode(tokens)
+                print(f'Rank {ddp_rank}, sample {i+1} > {text}')
+
+
+        # Training loop
+        model.train()
 
         optimizer.zero_grad()
 
