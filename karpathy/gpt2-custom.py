@@ -13,6 +13,8 @@ from torch.distributed import init_process_group, destroy_process_group
 from torch.nn import functional as F
 from torch.nn.parallel import DistributedDataParallel as DDP
 
+from hellaswag import render_example, iterate_examples
+
 ################################################################################
 ### Implementation
 ################################################################################
@@ -280,10 +282,31 @@ class GPT(nn.Module):
         return model
 
 
-# Example usage
-# torchrun --standalone --nproc_per_node=4 gpt2-custom.py
-# watch -n 0.1 nvidia-smi
+### Example usage ##############################################################
+
+# Simple launch: python gpt2-custom.py
+# DDP launch: torchrun --standalone --nproc_per_node=<NUM_GPU> gpt2-custom.py
+# GPU dashboard: watch -n 0.1 nvidia-smi
 if __name__ == '__main__':
+
+    # helper function for HellaSwag eval
+    def get_most_likely_row(tokens, mask, logits):
+        shift_logits = (logits[..., :-1, :]).contiguous()
+        shift_tokens = (tokens[..., 1:]).contiguous()
+        flat_shift_logits = shift_logits.view(-1, shift_logits.size(-1))
+        flat_shift_tokens = shift_tokens.view(-1)
+        shift_losses = F.cross_entropy(flat_shift_logits, flat_shift_tokens, reduction='none')
+        shift_losses = shift_losses.view(tokens.size(0), -1)
+        
+        shift_mask = (mask[..., 1:]).contiguous()
+        masked_shift_losses = shift_losses * shift_mask
+        
+        sum_loss = masked_shift_losses.sum(dim=1)
+        avg_loss = sum_loss / shift_mask.sum(dim=1)
+        
+        pred_norm = avg_loss.argmin().item()
+        return pred_norm
+
     # DDP initialization
     ddp = int(os.environ.get('RANK', -1)) != -1
 
@@ -335,7 +358,11 @@ if __name__ == '__main__':
     # Create new model
     model = GPT(GPTConfig(vocab_size=50304))
     model.to(device)
-    model = torch.compile(model)
+
+    use_compile = True
+    if use_compile:
+        model = torch.compile(model)
+
     if ddp:
         model = DDP(model, device_ids=[ddp_local_rank])
     raw_model = model.module if ddp else model
@@ -362,11 +389,18 @@ if __name__ == '__main__':
 
     encodings = tiktoken.get_encoding('gpt2')
 
+    log_dir = 'log'
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, f'log.txt')
+    with open(log_file, 'w') as f:
+        pass
+
     for step in range(max_steps):
         t0 = time.time()
+        last_step = (step == max_steps - 1)
 
         # Evaluate loss
-        if step % 2 == 0:
+        if step % 2 == 0 or last_step:
             model.eval()
             val_loader.reset()
 
@@ -389,12 +423,46 @@ if __name__ == '__main__':
 
             if master_process:
                 print(f'Step {step+1}: Validation loss = {val_loss_accum.item():.6f}')
+                with open(log_file, 'a') as f:
+                    f.write(f'Step {step+1}: Validation loss = {val_loss_accum.item():.6f}\n')
+
+        # HellaSwag evaluation
+        if step % 2 == 0 or last_step:
+            num_correct_norm = 0
+            num_total = 0
+            for i, example in enumerate(iterate_examples('val')):
+                if i % ddp_world_size != ddp_rank:
+                    continue
+                
+                _, tokens, mask, label = render_example(example)
+                tokens = tokens.to(device)
+                mask = mask.to(device)
+                
+                with torch.no_grad():
+                    with torch.autocast(device_type=device, dtype=torch.bfloat16):
+                        logits, loss = model(tokens)
+                    pred_norm = get_most_likely_row(tokens, mask, logits)
+                num_total += 1
+                num_correct_norm += int(pred_norm == label)
+            
+            if ddp:
+                num_total = torch.tensor(num_total, dtype=torch.long, device=device)
+                num_correct_norm = torch.tensor(num_correct_norm, dtype=torch.long, device=device)
+                dist.all_reduce(num_total, op=dist.ReduceOp.SUM)
+                dist.all_reduce(num_correct_norm, op=dist.ReduceOp.SUM)
+                num_total = num_total.item()
+                num_correct_norm = num_correct_norm.item()
+            acc_norm = num_correct_norm / num_total
+            if master_process:
+                print(f'HellaSwag accuracy: {num_correct_norm}/{num_total}={acc_norm:.4f}')
+                with open(log_file, 'a') as f:
+                    f.write(f'{step} hella {acc_norm:.4f}\n')
 
         # Sample from the model
-        if step > 0 and step % 2 == 0:
+        if ((step > 0 and step % 2 == 0) or last_step):
             model.eval()
 
-            num_return_sequences = 4
+            num_return_sequences = 4 
             max_length = 32
 
             tokens = encodings.encode('Once upon a time')
@@ -408,7 +476,8 @@ if __name__ == '__main__':
             while x_gen.size(1) < max_length:
                 with torch.no_grad():
                     # forward pass
-                    logits, _ = model(x_gen)
+                    with torch.autocast(device_type=device, dtype=torch.bfloat16 if device == 'cuda' else torch.float32):
+                        logits, _ = model(x_gen)
                     # only the logit at the last location is needed
                     logits = logits[:, -1, :]
                     # probabilities of the next token
@@ -471,6 +540,8 @@ if __name__ == '__main__':
         tp = (train_loader.B * train_loader.T * gradient_accum_steps * ddp_world_size) / dt
         if master_process:
             print(f'Step {step+1}: Loss = {loss_accum.item():.6f}, Learning rate = {lr:.4e}, Time = {dt:.2f} s, Norm: {norm:.4f}, Throughput = {tp:.2f} tokens/s')
+        with open(log_file, 'a') as f:
+            f.write(f'Step {step+1}: Loss = {loss_accum.item():.6f}, Learning rate = {lr:.4e}, Time = {dt:.2f} s, Norm: {norm:.4f}, Throughput = {tp:.2f} tokens/s\n')
 
     if ddp:
         destroy_process_group()

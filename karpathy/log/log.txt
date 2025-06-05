@@ -1,0 +1,5 @@
+Step 1: Validation loss = 10.947864
+0 hella 0.2429
+Step 1: Loss = 10.957170, Learning rate = 8.3916e-07, Time = 135.98 s, Norm: 16.3168, Throughput = 3855.75 tokens/s
+Step 2: Loss = 10.900366, Learning rate = 1.6783e-06, Time = 22.94 s, Norm: 15.6698, Throughput = 22853.71 tokens/s
+Step 3: Validation loss = 10.793002
