@@ -1,3 +1,0 @@
-[submodule "external/TransformerLens"]
-	path = external/TransformerLens
-	url = https://github.com/themarcosf/transformer_lens
