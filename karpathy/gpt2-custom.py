@@ -5,7 +5,6 @@ import time
 from dataclasses import dataclass
 
 import numpy as np
-import tiktoken
 import torch
 import torch.nn as nn
 import torch.distributed as dist
@@ -13,7 +12,7 @@ from torch.distributed import init_process_group, destroy_process_group
 from torch.nn import functional as F
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from hellaswag import render_example, iterate_examples
+from hellaswag import render_example, iterate_examples, get_seed_encodings, decode_seed_encodings
 
 ################################################################################
 ### Implementation
@@ -356,7 +355,7 @@ if __name__ == '__main__':
     torch.set_float32_matmul_precision('high')
 
     # Create new model
-    model = GPT(GPTConfig(vocab_size=50304))
+    model = GPT(GPTConfig(vocab_size=50257))
     model.to(device)
 
     use_compile = True
@@ -385,9 +384,7 @@ if __name__ == '__main__':
         return min_lr + coeff * (max_lr - min_lr)
 
 
-    optimizer = raw_model.configure_optimizers(weight_decay=0.1, learning_ratio=6e-4, device=device)
-
-    encodings = tiktoken.get_encoding('gpt2')
+    optimizer = raw_model.configure_optimizers(weight_decay=0.1, learning_ratio=max_lr, device=device)
 
     log_dir = 'log'
     os.makedirs(log_dir, exist_ok=True)
@@ -465,7 +462,7 @@ if __name__ == '__main__':
             num_return_sequences = 4 
             max_length = 32
 
-            tokens = encodings.encode('Once upon a time')
+            tokens = get_seed_encodings('Once upon a time')
             tokens = torch.tensor(tokens, dtype=torch.long)
             tokens = tokens.unsqueeze(0).repeat(num_return_sequences, 1)
             x_gen = tokens.to(device)
@@ -494,7 +491,7 @@ if __name__ == '__main__':
             # decode the predicted tokens
             for i in range(num_return_sequences):
                 tokens = x_gen[i, :max_length].tolist()
-                text = encodings.decode(tokens)
+                text = decode_seed_encodings(tokens)
                 print(f'Rank {ddp_rank}, sample {i+1} > {text}')
 
 
@@ -540,6 +537,16 @@ if __name__ == '__main__':
         tp = (train_loader.B * train_loader.T * gradient_accum_steps * ddp_world_size) / dt
         if master_process:
             print(f'Step {step+1}: Loss = {loss_accum.item():.6f}, Learning rate = {lr:.4e}, Time = {dt:.2f} s, Norm: {norm:.4f}, Throughput = {tp:.2f} tokens/s')
+
+            if step % 1 == 0 or last_step:
+                ckpt = {
+                    'step': step,
+                    'model_state_dict': raw_model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                }
+                torch.save(ckpt, 'checkpoint_step.pth')
+                print(f'Checkpoint saved: checkpoint_step{step}.pth')
+
         with open(log_file, 'a') as f:
             f.write(f'Step {step+1}: Loss = {loss_accum.item():.6f}, Learning rate = {lr:.4e}, Time = {dt:.2f} s, Norm: {norm:.4f}, Throughput = {tp:.2f} tokens/s\n')
 

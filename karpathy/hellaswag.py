@@ -8,6 +8,7 @@ GPT2 124M observed accuracy (norm): 0.2957 <<-- this is the baseline
 """
 import json
 import os
+import pickle
 import requests
 
 import tiktoken
@@ -17,7 +18,16 @@ from tqdm import tqdm
 from transformers import GPT2LMHeadModel
 
 
-DATA_CACHE_DIR = os.path.join(os.path.dirname(__file__), 'hellaswag')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_CACHE_DIR = os.path.join(BASE_DIR, 'hellaswag')
+ENCODINGS_CACHE_DIR = os.path.join(BASE_DIR, 'seed_encodings')
+
+
+enc = tiktoken.get_encoding('gpt2')
+
+seeds = os.path.join(ENCODINGS_CACHE_DIR, 'gpt2_seed_encodings.pkl')
+with open(seeds, 'rb') as f:
+    seed_encodings: torch.Tensor = pickle.load(f)
 
 
 def download_file(url: str, fname: str, chunk_size=1024):
@@ -40,7 +50,16 @@ hellaswags = {
     'test': 'https://raw.githubusercontent.com/rowanz/hellaswag/master/data/hellaswag_test.jsonl',
 }
 
-enc = tiktoken.get_encoding('gpt2')
+def get_seed_encodings(ctx):
+    tkns = enc.encode(ctx)
+    seed_tkns = seed_encodings[tkns].tolist()
+    return seed_tkns
+
+def decode_seed_encodings(seed_tkns):
+    mask = torch.isin(seed_encodings, torch.tensor(seed_tkns))
+    tkns = mask.nonzero(as_tuple=True)[0]
+    return enc.decode(tkns.tolist())
+
 
 def download(split):
     os.makedirs(DATA_CACHE_DIR, exist_ok=True)
@@ -62,12 +81,12 @@ def render_example(example):
         'ending_tokens': [],
     }
 
-    ctx_tokens = enc.encode(ctx)
+    ctx_tokens = get_seed_encodings(ctx)
     data['ctx_tokens'] = ctx_tokens
     tok_rows = []
     mask_rows = []
     for end in endings:
-        end_tokens = enc.encode(' ' + end)
+        end_tokens = get_seed_encodings(' ' + end)
         tok_rows.append(ctx_tokens + end_tokens)
         mask_rows.append([0]*len(ctx_tokens) + [1]*len(end_tokens))
         data['ending_tokens'].append(end_tokens)
