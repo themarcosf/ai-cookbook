@@ -1,6 +1,8 @@
 --extra-index-url https://download.pytorch.org/whl/cu121
 
 aiohttp==3.11.16
+beautifulsoup4==4.13.4
+chromadb==1.0.16
 circuitsvis==1.43.3
 cryptography==44.0.1
 datasets==3.6.0
@@ -8,6 +10,9 @@ einops==0.8.1
 hf-xet==1.1.0
 huggingface-hub==0.30.2
 ipykernel==6.29.5
+langchain==0.3.27
+langchain-community==0.3.27
+langchain-openai==0.3.30
 matplotlib==3.10.1
 nbformat==5.10.4
 numpy==2.2.3
