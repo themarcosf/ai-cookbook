@@ -155,11 +155,11 @@ def reciprocal_rank_fusion(results: list[list], k=60):
     return reranked_results
 
 def format_qa_pairs(questions, answers):
-        """Format Q&A pairs for decomposition"""
-        formatted_string = ""
-        for i, (q, a) in enumerate(zip(questions, answers), start=1):
-            formatted_string += f"Question {i}: {q}\nAnswer {i}: {a}\n\n"
-        return formatted_string.strip()
+    """Format Q&A pairs for decomposition"""
+    formatted_string = ""
+    for i, (q, a) in enumerate(zip(questions, answers), start=1):
+        formatted_string += f"Question {i}: {q}\nAnswer {i}: {a}\n\n"
+    return formatted_string.strip()
 
 
 if __name__ == "__main__":

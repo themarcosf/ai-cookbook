@@ -11,6 +11,7 @@ hf-xet==1.1.0
 huggingface-hub==0.30.2
 ipykernel==6.29.5
 langchain==0.3.27
+langchain-chroma==0.2.5
 langchain-community==0.3.27
 langchain-openai==0.3.30
 matplotlib==3.10.1
